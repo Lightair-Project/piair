@@ -53,7 +53,7 @@ co-host avatar speak with lip sync, chat (Stream Check's test chat or `chat.test
 Done: with AI drives on and the target app allowed, "open a new tab in Safari" works end to end;
 touching the mouse pauses it at once; the hotkey kills it; typing into a password field is refused.
 
-## M5. Memory and co-host behaviour — built; the long-memory and chattiness checks not run yet
+## M5. Memory and co-host behaviour — done (checks in design.md, Measurements)
 
 - `src/memory.ts` (notes with caps, SQLite FTS5), `src/director.ts` (scoring, batching,
   chattiness, turn-taking with `streamer` and `heard`), compaction into the stream note.
@@ -84,7 +84,6 @@ passes) and starts from the panel.
   in tests; fine in other apps as far as known, unverified.
 - **lightair-core:** expose MCP's tool table as JSON so PiAir needn't keep a synced copy
   (`bun run sync-tools`).
-- The checks M5 names (a viewer remembered an hour later, chattiness levels).
 
 ## Later
 

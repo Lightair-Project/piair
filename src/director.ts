@@ -183,8 +183,27 @@ setInterval(() => {
   ]
     .filter(Boolean)
     .join("\n");
-  void turn(pick.some((c) => c.urgent) ? "event" : "chat", prompt);
+  void turn(pick.some((c) => c.urgent) ? "event" : "chat", prompt).then(() => notePicked(pick));
 }, 250);
+
+/** Someone said something about themselves: worth a line in their note. */
+const DISCLOSES = /\b(i'?m|i am|my|i have|i love|i like|i hate|call me|name is|i live|i work|i play|i've been)\b/i;
+
+async function notePicked(pick: Candidate[]) {
+  for (const c of pick) {
+    if (!DISCLOSES.test(c.text)) continue;
+    const who = { platform: c.platform, id: c.viewer };
+    try {
+      const current = memory.readNote("viewer", who);
+      const next = await brain.noteFromChat(c.who, c.text, current);
+      if (!next || next === current.trim() || !moderate(next, false).ok) continue;
+      memory.writeNote("viewer", next, true, who);
+      log("info", `noted something about a viewer (${next.length} characters)`);
+    } catch (e) {
+      log("warn", "viewer note:", e);
+    }
+  }
+}
 
 async function turn(source: Source, prompt: string) {
   busy = true;

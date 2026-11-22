@@ -418,6 +418,20 @@ turns with screenshots, two actions). Lightair's click-zoom zoomed the stream's 
 point and out again after 6 s. Touching the mouse while AI drives was on showed "Paused: you're in
 control" at once.
 
+**Memory across runs** (`proto/memory-check.ts`, Gemini Flash-Lite): a viewer wrote "I'm Maya…
+my favourite game is Stardew Valley and I have a cat called Biscuit"; after the turn PiAir kept
+the note "Maya (kiwi_bird), first-time viewer. Likes Stardew Valley. Has a cat named Biscuit." A
+new PiAir process on the same data folder, asked "do you remember my cat's name and what game I
+love?", answered from the note: "…you love Stardew Valley and your cat's name is Biscuit!" (Without
+the note, an earlier run found it through `recall` over the full-text history.) The model didn't
+call `remember` on its own, so the director now updates a viewer's note after any turn in which
+they said something about themselves (one short model call, off the reply's path, moderated, capped).
+
+**Turn-taking** (`proto/director-check.ts`, Pi's faux provider, plain chat every 3 s): quiet never
+spoke; chatty spoke at 0.3, 8.4, 16.4 and 24.5 s; lively at 0.3 and 20.4 s; quiet answered its
+name at once (2.1 s, the message came at 2 s); a mention while the streamer talked until 6 s was
+answered at 6.8 s (0.7 s after they stopped).
+
 Lessons: small models (Gemini Flash-Lite) sometimes say "on it" without calling the tool, and copy
 that from their own history; the director now runs a streamer's action request as a task when the
 reply promised it but called nothing. A task's result says what really happened (a model claimed
