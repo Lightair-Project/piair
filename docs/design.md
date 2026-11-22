@@ -5,7 +5,7 @@ avatar (lip sync, expressions, gaze), and can use the computer (pointer, keys, L
 while Lightair shows every move. It is a separate program, written in TypeScript on Bun, built on
 Pi's libraries, shipped as one compiled binary inside Lightair.
 
-Status: design approved by the owner's brief (23 November 2026). Measured numbers are in
+Status: built on macOS (23 November 2026); see plan.md for what's left. Measured numbers are in
 [Measurements](#measurements). The plan and milestones are in [plan.md](plan.md).
 
 ## 1. Who owns what
@@ -431,6 +431,15 @@ they said something about themselves (one short model call, off the reply's path
 spoke; chatty spoke at 0.3, 8.4, 16.4 and 24.5 s; lively at 0.3 and 20.4 s; quiet answered its
 name at once (2.1 s, the message came at 2 s); a mention while the streamer talked until 6 s was
 answered at 6.8 s (0.7 s after they stopped).
+
+**Screenshot privacy** (Release build, TextEdit allowed): without AI drives `computer.screenshot`
+is refused; with it, the picture the model received showed only TextEdit's two windows on black
+(no Lightair, other apps, menu bar or Dock). One display only on this Mac: a second display is
+handled by the same code (the display under the pointer; black if its visible frame can't be
+found) but wasn't tried.
+
+**Not measured yet:** Cartesia and ElevenLabs (no keys on the build machine), subscription
+sign-in, anything on Windows.
 
 Lessons: small models (Gemini Flash-Lite) sometimes say "on it" without calling the tool, and copy
 that from their own history; the director now runs a streamer's action request as a task when the

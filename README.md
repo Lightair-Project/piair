@@ -7,6 +7,14 @@ avatar, and can use the computer (pointer, keys, Lightair's zoom) while Lightair
 Ships as one Bun-compiled binary inside Lightair.app. Design: [docs/design.md](docs/design.md);
 plan and milestones: [docs/plan.md](docs/plan.md); dependency licences: [docs/licences.md](docs/licences.md).
 
+## Where it stands
+
+Working on macOS in Lightair's Release build: chat answered aloud through the co-host avatar with
+lip sync, Lightair actions, computer use with Lightair's zoom (AI drives, the human always wins,
+allowed apps, no password fields, confirmations, screenshots of allowed apps only), memory of
+viewers across streams. Left: voice keys and subscription sign-in to try, computer use on
+Windows. Details in [docs/plan.md](docs/plan.md).
+
 ## Working on it
 
 ```sh
