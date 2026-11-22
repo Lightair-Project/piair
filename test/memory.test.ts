@@ -1,6 +1,8 @@
 // Memory (design §8): small capped notes the model curates, kept across restarts in the data
 // folder, and full-text search over everything said.
 import { afterEach, describe, expect, jest, test } from "bun:test";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
 import * as memory from "../src/memory.ts";
 import { tempDir } from "./helpers.ts";
 
@@ -83,5 +85,41 @@ describe("full-text search", () => {
     memory.record("viewer", "a new line about Biscuit", "kiwi_bird", "twitch", "42");
     memory.open(dir, 30);
     expect(memory.search("Biscuit").map((r) => r.text)).toEqual(["a new line about Biscuit"]);
+  });
+});
+
+describe("notes are searched too", () => {
+  const notes = (query: string, who?: string) => memory.search(query, who).filter((r) => r.role === "note");
+
+  test("a note is found by its words, and only for its viewer when one is asked for", () => {
+    memory.open(tempDir(), 90);
+    memory.writeNote("viewer", "Maya. Has a cat called Biscuit.", false, maya, "kiwi_bird");
+    memory.writeNote("viewer", "Likes Stardew Valley.", false, { platform: "twitch", id: "7" }, "crumbs");
+    expect(notes("Biscuit").map((r) => r.text)).toEqual(["Maya. Has a cat called Biscuit."]);
+    expect(notes("Biscuit", "kiwi_bird")).toHaveLength(1);
+    expect(notes("Biscuit", "crumbs")).toEqual([]);
+  });
+
+  test("still found after a restart, even with the search index gone (the note files are the truth)", () => {
+    const dir = tempDir();
+    memory.open(dir, 90);
+    memory.writeNote("viewer", "Has a cat called Biscuit.", false, maya, "kiwi_bird");
+    memory.writeNote("self", "The streamer calls me Pi.", false);
+    memory.open(dir, 90);
+    expect(notes("Biscuit", "kiwi_bird")).toHaveLength(1);
+    rmSync(join(dir, "piair.sqlite"), { force: true });
+    rmSync(join(dir, "piair.sqlite-wal"), { force: true });
+    rmSync(join(dir, "piair.sqlite-shm"), { force: true });
+    memory.open(dir, 90);
+    expect(notes("Biscuit").map((r) => r.text)).toEqual(["Has a cat called Biscuit."]);
+    expect(notes("streamer calls")).toHaveLength(1);
+  });
+
+  test("after a rewrite, the old words no longer find it and the new ones do", () => {
+    memory.open(tempDir(), 90);
+    memory.writeNote("viewer", "Has a cat called Biscuit.", false, maya, "kiwi_bird");
+    memory.writeNote("viewer", "Has a dog called Pickle.", true, maya, "kiwi_bird");
+    expect(notes("Biscuit")).toEqual([]);
+    expect(notes("Pickle", "kiwi_bird").map((r) => r.text)).toEqual(["Has a dog called Pickle."]);
   });
 });
