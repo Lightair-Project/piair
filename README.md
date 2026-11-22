@@ -29,7 +29,7 @@ Lightair finds PiAir next to its executable, else `../piair/dist/<target>/piair`
 `LIGHTAIR_PIAIR=bun` to run this checkout's source instead. The desktop's `cargo xtask bundle`
 and `cargo xtask dist` build and bundle it (`dist` signs it with the JIT entitlements Bun needs).
 
-Development aids in Lightair: `LIGHTAIR_PIAIR_PROMPT_FILE=<file>` sends the file's newest line
+Development aids in debug builds of Lightair (a Release build ignores them): `LIGHTAIR_PIAIR_PROMPT_FILE=<file>` sends the file's newest line
 to PiAir as a prompt (or a command: `!on`, `!off`, `!drives`, `!stop`, `!avatar <name>`,
 `!allow <bundle id>`, `!settings <json>`, `!chat <who>: <text>`, `!call <method> <json>`).
 
