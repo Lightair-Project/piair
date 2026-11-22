@@ -10,7 +10,7 @@ async function shot(note: string) {
   const where = s.cursor ? ` Pointer at ${Math.round(s.cursor.x)},${Math.round(s.cursor.y)}.` : "";
   return {
     content: [
-      { type: "text" as const, text: `${note} Screen ${s.width}×${s.height}.${where}` },
+      { type: "text" as const, text: `${note} Screen ${s.width}×${s.height}.${where} Black areas are apps you may not see or use.` },
       { type: "image" as const, data: s.image, mimeType: "image/jpeg" },
     ],
     details: {},

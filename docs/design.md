@@ -279,6 +279,13 @@ Errors with `no_zoom` when no screen capture with zoom is on air.
 - **App allowlist:** the AI may only act in apps on the list (bundle IDs / executable names; empty
   by default, the panel adds the frontmost app or picks from running apps). Checked for the
   frontmost app and for the app under the click point. Lightair itself is never on it.
+- **Screenshots show only what the AI may touch:** `computer.screenshot` works only while AI
+  drives is on, and the picture sent to the model keeps only the visible parts of the allowed
+  apps' windows; everything else (other apps, Lightair, the menu bar, the Dock, the desktop, the
+  round corners of windows) is black, worked out from the window list (`CGWindowListCopyWindowInfo`,
+  front to back). The panel shows a camera glyph for a few seconds after each picture, with the
+  provider it went to behind it. (Free tiers may train on what they're sent: another reason to keep
+  pictures to the allowed apps.)
 - **No typing into password fields:** `computer.type` and `computer.key` are refused when secure
   keyboard entry is on (`IsSecureEventInputEnabled`) or the focused element is a secure text field
   (`AXSecureTextField`).
