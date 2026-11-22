@@ -7,5 +7,15 @@
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.6.0",
     "@earendil-works/pi-ai": "1.6.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.5",
+    "typescript": "5"
+  },
+  "scripts": {
+    "start": "bun src/main.ts",
+    "check": "tsc -p .",
+    "sync-tools": "bun scripts/sync-mcp-tools.ts",
+    "build": "bun scripts/build.ts"
   }
 }

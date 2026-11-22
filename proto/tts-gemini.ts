@@ -1,3 +1,4 @@
+export {};
 // Prototype 2a: Gemini TTS, streamed. Time to first audio and total, for one sentence.
 const key = process.env.GEMINI_API_KEY!;
 const model = process.argv[2] ?? "gemini-3.8-flash-lite-tts";
