@@ -9,7 +9,7 @@ import { turnViewers } from "./tools/talk.ts";
 import type { Source } from "./tools/types.ts";
 import type { Voice } from "./voice/index.ts";
 
-type Candidate = { score: number; at: number; line: string; who: string; platform: string; viewer: string; urgent: boolean };
+type Candidate = { score: number; at: number; line: string; text: string; who: string; platform: string; viewer: string; urgent: boolean };
 
 /** Least time between turns PiAir starts on its own, by chattiness. Infinity: only when addressed. */
 const GAP_MS = [Infinity, 45_000, 20_000, 8_000];
@@ -74,7 +74,7 @@ export function onChat(ev: any) {
 
   const what = kind === "message" ? "" : ` (${kind}${ev.paid?.amount ? ` ${ev.paid.amount} ${ev.paid.currency ?? ""}` : ""}${ev.headline ? `: ${ev.headline}` : ""})`;
   const tags = [platform, first ? "first message" : ""].filter(Boolean).join(", ");
-  candidates.push({ score, at: Date.now(), line: `[${tags}] ${esc(who)}${what}: ${esc(textIn)}`, who, platform, viewer, urgent });
+  candidates.push({ score, at: Date.now(), line: `[${tags}] ${esc(who)}${what}: ${esc(textIn)}`, text: textIn || (ev.headline ?? kind), who, platform, viewer, urgent });
   if (candidates.length > 60) candidates = candidates.sort((a, b) => b.score - a.score).slice(0, 40);
 }
 
@@ -166,6 +166,8 @@ setInterval(() => {
   const pick = candidates.sort((a, b) => b.score - a.score || a.at - b.at).slice(0, 5).sort((a, b) => a.at - b.at);
   candidates = candidates.filter((c) => !pick.includes(c));
   turnViewers.clear();
+  // the panel shows what PiAir is answering
+  for (const c of pick) send({ t: "transcript", role: "viewer", who: c.who, text: c.text });
   const notes: string[] = [];
   for (const c of pick) {
     turnViewers.set(c.who, { platform: c.platform, id: c.viewer });
