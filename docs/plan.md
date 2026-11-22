@@ -81,7 +81,6 @@ passes) and starts from the panel.
   phoneme and character marks moving the mouth, first audio under ~150 ms.
 - **Subscription sign-in (owner):** Pi's OAuth (Claude Pro/Max, ChatGPT, GitHub Copilot) is wired
   to the panel's "Use subscription" button and code prompt but unrun; it needs the owner's account.
-- **Windows computer use:** see "Windows executor" below.
 - **Second display:** handled by the same code as the first; not tried (one display here).
 - **Synthetic scroll in GPUI apps:** CGEvent wheel and drag events didn't reach Lightair's own
   panels in tests; other apps take them as far as known (unverified).
