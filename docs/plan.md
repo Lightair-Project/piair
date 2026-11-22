@@ -20,7 +20,7 @@ Tests are not written by the code writer (project rule); the test writer adds th
    clicks, Lightair's click-zoom reacts. Done when the pointer path and zoom are seen in a
    Lightair screenshot and the per-step times are recorded.
 
-## M2. PiAir runtime
+## M2. PiAir runtime — done
 
 - `src/protocol.ts` (NDJSON both ways, calls with ids and timeouts), `src/main.ts`.
 - `src/settings.ts`, `src/secrets.ts` (a Pi `CredentialStore` over `secret.get/set`).
@@ -33,7 +33,7 @@ Tests are not written by the code writer (project rule); the test writer adds th
 Done: `bun src/main.ts` driven by a fake Lightair (`proto/fake-lightair.ts`) answers a chat
 message with voice frames, and a prompt with a tool call.
 
-## M3. Desktop: host, voice, face, panel
+## M3. Desktop: host, voice, face, panel — done (desktop commits 1957064, 01aad76, 5485978, local)
 
 - `crates/lightair-app/src/piair/` (`mod.rs` host and protocol, `calls.rs` routing into
   `remote_call`, `panel.rs`), `lightair-engine/src/piair_voice.rs` (the voice source),
@@ -44,7 +44,7 @@ message with voice frames, and a prompt with a tool call.
 Done: in a Release build, turning PiAir on adds the "PiAir" track, a panel prompt makes the
 co-host avatar speak with lip sync, chat (Stream Check's test chat or `chat.test`) gets answers.
 
-## M4. Computer use and zoom
+## M4. Computer use and zoom — done on macOS; Windows to do
 
 - `crates/lightair-app/src/piair/input_mac.rs` (CGEvent, event tap, AX checks, screenshot),
   `input_win.rs` (SendInput, low-level hooks), `lightair-engine/src/zoom_to.rs` and its hook in
@@ -53,7 +53,7 @@ co-host avatar speak with lip sync, chat (Stream Check's test chat or `chat.test
 Done: with AI drives on and the target app allowed, "open a new tab in Safari" works end to end;
 touching the mouse pauses it at once; the hotkey kills it; typing into a password field is refused.
 
-## M5. Memory and co-host behaviour
+## M5. Memory and co-host behaviour — built; the long-memory and chattiness checks not run yet
 
 - `src/memory.ts` (notes with caps, SQLite FTS5), `src/director.ts` (scoring, batching,
   chattiness, turn-taking with `streamer` and `heard`), compaction into the stream note.
@@ -61,13 +61,30 @@ touching the mouse pauses it at once; the hotkey kills it; typing into a passwor
 Done: a viewer who said their name and favourite game an hour ago is greeted by both; PiAir stays
 quiet while the streamer talks; chattiness levels change how often it speaks.
 
-## M6. Packaging and polish
+## M6. Packaging and polish — bundling and signing done; installed in /Applications
 
 - `cargo xtask dist` bundles and signs `piair`; Windows `piair.exe` alongside; `docs/licences.md`.
 - UI pass against SESSIONS.md's four questions.
 
 Done: `/Applications/Lightair.app/Contents/MacOS/piair` is signed (codesign --verify --deep
 passes) and starts from the panel.
+
+## Still to do (23 November 2026)
+
+- **Windows computer use:** `input_win.rs` (SendInput, a low-level hook that tells injected
+  events from the human by `LLMHF_INJECTED` and Lightair's `dwExtraInfo` tag, UI Automation for
+  password fields and button names, a screenshot through DXGI or GDI). Until then Windows answers
+  "not available yet" to `computer.*`.
+- **Real voice keys:** Cartesia and ElevenLabs clients are written to their documented protocols
+  but unrun (no keys on the build machine). First run with a key: check the voice id default
+  (Cartesia picks the account's first voice) and the phoneme marks.
+- **Subscription sign-in:** the OAuth path (Pi's `models.login`) and the panel's code prompt are
+  wired but unrun.
+- **Synthetic scroll in GPUI apps:** CGEvent wheel events didn't scroll Lightair's own panels
+  in tests; fine in other apps as far as known, unverified.
+- **lightair-core:** expose MCP's tool table as JSON so PiAir needn't keep a synced copy
+  (`bun run sync-tools`).
+- The checks M5 names (a viewer remembered an hour later, chattiness levels).
 
 ## Later
 
