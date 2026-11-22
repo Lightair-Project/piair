@@ -197,7 +197,7 @@ async function notePicked(pick: Candidate[]) {
       const current = memory.readNote("viewer", who);
       const next = await brain.noteFromChat(c.who, c.text, current);
       if (!next || next === current.trim() || !moderate(next, false).ok) continue;
-      memory.writeNote("viewer", next, true, who);
+      memory.writeNote("viewer", next, true, who, c.who);
       log("info", `noted something about a viewer (${next.length} characters)`);
     } catch (e) {
       log("warn", "viewer note:", e);

@@ -26,20 +26,20 @@ export function talkTools(): Tool[] {
       async execute(_id: string, p: any) {
         const who = p.about === "viewer" ? turnViewers.get(String(p.who ?? "")) : undefined;
         if (p.about === "viewer" && !who) throw new Error(`No viewer called ${p.who} in this turn`);
-        memory.writeNote(p.about, String(p.note ?? ""), !!p.replace, who);
+        memory.writeNote(p.about, String(p.note ?? ""), !!p.replace, who, p.about === "viewer" ? String(p.who) : undefined);
         return text("Noted.");
       },
     },
     {
       name: "recall",
       label: "Recall",
-      description: "Searches everything said on past streams (chat, the streamer, you). who: limit to one viewer's display name.",
+      description: "Searches your notes and everything said on past streams (chat, the streamer, you). who: limit to one viewer's display name.",
       parameters: { type: "object", properties: { query: { type: "string" }, who: { type: "string" } }, required: ["query"] },
       untrustedOk: true,
       async execute(_id: string, p: any) {
         const rows = memory.search(String(p.query ?? ""), p.who ? String(p.who) : undefined);
         if (!rows.length) return text("Nothing found.");
-        return text(rows.map((r) => `${r.day} ${r.role === "viewer" ? r.who : r.role}: ${r.text}`).join("\n"));
+        return text(rows.map((r) => (r.role === "note" ? `Note about ${r.who}: ${r.text}` : `${r.day} ${r.role === "viewer" ? r.who : r.role}: ${r.text}`)).join("\n"));
       },
     },
   ];
