@@ -4,7 +4,10 @@ import { log } from "../protocol.ts";
 import { DEFAULT_VOICES } from "../settings.ts";
 import { deferred, Outbox, type Utterance, type Voice } from "./index.ts";
 
-const MODEL = "gemini-3.8-flash-tts";
+/** Gemini's TTS models, best first. Free-tier keys get a few requests per model per day, so a
+ * model that answers 429 is skipped for the rest of the run. */
+const MODELS = ["gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-pro-preview-tts"];
+const exhausted = new Set<string>();
 
 export class Gemini implements Voice {
   readonly vendor = "gemini" as const;
@@ -26,15 +29,22 @@ export class Gemini implements Voice {
     type Live = { emit?: (b: Uint8Array) => void; chunks: Uint8Array[] };
     function request(text: string, live: Live): Promise<void> {
       return (async () => {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse`, {
-          method: "POST",
-          signal: controller.signal,
-          headers: { "x-goog-api-key": key, "content-type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text }] }],
-            generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } } },
-          }),
-        });
+        let r: Response | null = null;
+        for (const model of MODELS.filter((m) => !exhausted.has(m))) {
+          r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`, {
+            method: "POST",
+            signal: controller.signal,
+            headers: { "x-goog-api-key": key, "content-type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text }] }],
+              generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } } },
+            }),
+          });
+          if (r.status !== 429 && r.status !== 404) break;
+          exhausted.add(model);
+          log("warn", `voice: ${model} answered ${r.status}; trying the next Gemini voice model`);
+        }
+        if (!r) throw new Error("Gemini TTS: every model is over its quota for today");
         if (!r.ok || !r.body) throw new Error(`Gemini TTS ${r.status}: ${(await r.text()).slice(0, 200)}`);
         const dec = new TextDecoder();
         let buf = "";

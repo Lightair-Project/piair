@@ -7,7 +7,7 @@ Tests are not written by the code writer (project rule); the test writer adds th
 
 `docs/design.md`, `docs/plan.md`, committed and pushed.
 
-## M1. Prototypes of the three risky parts
+## M1. Prototypes of the three risky parts — done (numbers in design.md)
 
 1. **Pi streams text fast enough to speak.** `proto/stream.ts`: time to first token and first
    sentence through `pi-ai`. Done: numbers in design.md (Gemini free tier: 0.4–1.6 s to the first

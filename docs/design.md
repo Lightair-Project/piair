@@ -53,6 +53,10 @@ silent, the avatar returns to its camera (or rest), and the input executor stops
 | `stop` | — | Kill switch: abort the current turn, drop queued speech, stop any computer task. |
 | `reply` | `id`, `result` or `error {code, message}` | Answer to a `call`. |
 | `settings` | `values` | The panel changed settings (PiAir saves and applies them). |
+| `providers` | — | Asks for the provider list again (answered with `providers`). |
+| `login` | `provider`, `kind: oauth\|api_key`, `key?` | Sign in to a provider (OAuth runs Pi's flow; `auth` messages follow). |
+| `auth_code` | `code` | The code the streamer pasted for a sign-in that asked for one. |
+| `voice_key` | — | A voice key was saved in the Keychain: connect the voice again. |
 
 ### 2.2 Messages, PiAir → Lightair
 
@@ -95,9 +99,9 @@ turns into a tool error the model can read.
 ### 2.4 Why not the remote API's WebSocket or MCP
 
 The remote API (port 4455) can be off, can have LAN on, and needs the user's password; a
-co-host needs none of that. Calls from PiAir still go through **the same dispatcher**
-(`StudioWindow::remote_call`, `crates/lightair-app/src/shell/remote.rs:631`) with client
-`"PiAir"`, so its Lightair tools and the MCP tools are the same methods, undoable and labelled
+co-host needs none of that. Calls from PiAir still go through **the same handler** the remote API
+uses (`StudioWindow::api_handler`, `crates/lightair-app/src/shell/remote.rs`: a few methods on
+the calling thread, the rest through `remote_call` on the main thread) with client `"PiAir"`, so its Lightair tools and the MCP tools are the same methods, undoable and labelled
 the same way. The MCP server stays open to outside agents (Claude Code, Codex, Hermes, Goose)
 exactly as it is.
 
@@ -269,8 +273,8 @@ Errors with `no_zoom` when no screen capture with zoom is on air.
   and `computer` `{paused: true}` goes to PiAir. It resumes after 3 s without human input. On
   Windows, low-level hooks see `LLMHF_INJECTED`/`LLKHF_INJECTED` and Lightair's own
   `dwExtraInfo` tag.
-- **Kill switch:** a global hotkey (default ⌃⌥⌘K / Ctrl+Alt+Shift+K, changeable in Settings →
-  Shortcuts) turns AI-drives off, cancels speech and sends `stop`. If PiAir doesn't stop within
+- **Kill switch:** a global hotkey (default ⌃⌥⌘K, Ctrl+Alt+K on Windows, changeable in Settings
+  → Shortcuts) turns AI-drives off, cancels speech and sends `stop`. If PiAir doesn't stop within
   1 s, Lightair kills the process. A stop button in the panel does the same.
 - **App allowlist:** the AI may only act in apps on the list (bundle IDs / executable names; empty
   by default, the panel adds the frontmost app or picks from running apps). Checked for the
@@ -390,5 +394,24 @@ too and updates about once a second, so it **cannot** tell the human from the AI
 event tap does: 20 of 20 tagged events came back with the tag; untagged posted events carry the
 poster's PID (hardware events carry 0). The human-always-wins check is built on the tap.
 
-The rows for voice through a real avatar and the computer-use loop are filled in as each
-prototype runs (plan.md, M1).
+**Voice and lip sync through `rig::Face` on a real avatar** (a development build of Lightair, a
+VRM avatar with no face in its camera, Gemini TTS): the "PiAir" track appears in the mixer when
+PiAir is turned on, the voice plays on it, and the mouth follows the sound (frames every 0.45 s:
+closed before speech, opening and closing with the syllables, the head swaying, the `[happy]` mood
+switching the VRM's happy expression on). Time from the prompt to the first sentence: 1.05–1.3 s
+on good runs, 3–5 s while Gemini was overloaded; first audio 1.0–1.4 s after the first sentence
+(Gemini TTS, including 429 retries on the free tier's 10-a-day limit). With Cartesia or
+ElevenLabs (90–150 ms) and a fast model, the budget in §10 applies; those keys weren't available.
+
+**Computer use** (the same build, AI drives on, TextEdit allowed): asked in the panel to type in
+an empty TextEdit document, PiAir looked at the screen, moved the real pointer along its path,
+clicked into the document and typed "Hello from PiAir." in about 10 s from the prompt (three model
+turns with screenshots, two actions). Lightair's click-zoom zoomed the stream's screen capture in
+2× on PiAir's click and back out after its hold; `computer.zoom_to` zoomed it 2.5× into the asked
+point and out again after 6 s. Touching the mouse while AI drives was on showed "Paused: you're in
+control" at once.
+
+Lessons: small models (Gemini Flash-Lite) sometimes say "on it" without calling the tool, and copy
+that from their own history; the director now runs a streamer's action request as a task when the
+reply promised it but called nothing. A task's result says what really happened (a model claimed
+"I've typed it" after its tools failed).

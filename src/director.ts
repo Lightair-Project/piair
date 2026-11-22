@@ -42,7 +42,9 @@ const nameRe = () => new RegExp(`\\b${settings.get().persona.name.replace(/[.*+?
 // ------------------------------------------------------------------ inputs
 
 export function onChat(ev: any) {
-  const kind = ev.kind ?? "message";
+  // Lightair's ChatEvent: kind is {"type": "message"} (a raid carries its viewers)
+  const kind = typeof ev.kind === "string" ? ev.kind : (ev.kind?.type ?? "message");
+  if (kind === "raid" && ev.kind?.viewers) ev.headline ??= `${ev.kind.viewers} viewers`;
   const user = ev.user ?? {};
   const who = String(user.display_name ?? user.login ?? "someone");
   const platform = String(ev.platform ?? "");
@@ -198,6 +200,7 @@ async function turn(source: Source, prompt: string) {
   let cut = false;
   const t0 = performance.now();
   let firstPieceMs = 0;
+  let usedTool = false;
   const splitter = new Splitter((piece) => {
     if (cut || ac.signal.aborted) return;
     // a mood tag at the start of a sentence changes the face, isn't said
@@ -232,6 +235,7 @@ async function turn(source: Source, prompt: string) {
         splitter.push(delta);
       },
       onToolStart() {
+        usedTool = true;
         // a tool call in the middle: say what came before it now
         if (head && head.length < 8 && !skipped) {
           splitter.push(head);
@@ -242,6 +246,19 @@ async function turn(source: Source, prompt: string) {
     }, ac.signal);
     if (!skipped && head.length < 8 && head.trim()) splitter.push(head);
     splitter.end();
+    // the streamer asked for an action and the model only talked about it: do it anyway
+    const asked = /\b(use the computer|on (my|the) (computer|screen|mac|pc)|click|type|open|go to|scroll|press|zoom|show (me|them|the viewers|chat))\b/i;
+    const promised = /\b(on it|watch this|let me|i'?ll|i will|sure|okay|ok|doing|one sec|give me|here we go|another shot|try again)\b/i;
+    if (source === "streamer" && !usedTool && !ac.signal.aborted && asked.test(prompt) && promised.test(said)) {
+      log("info", `turn ${id}: no tool call for an action request; running it as a task`);
+      const goal = prompt.replace(/^The streamer[^:]*:\s*/, "");
+      const result = await brain.runTaskFor(goal, { onText: () => {} }, ac.signal);
+      const line = speakable(result).slice(0, 300);
+      if (line && moderate(line, s.persona.familyFriendly).ok) {
+        said += (said ? " " : "") + line;
+        utt?.say(line);
+      }
+    }
   } catch (e) {
     log("warn", "turn:", e);
     send({ t: "status", state: "error", detail: e instanceof Error ? e.message : String(e) });
