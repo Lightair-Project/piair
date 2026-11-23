@@ -358,8 +358,8 @@ with what's available on this machine are below.
   `allow-unsigned-executable-memory`, `disable-library-validation`). Windows: `piair.exe` next to
   `lightair.exe`, signed with the same certificate. Development runs find it at
   `../piair/dist/<t>/piair` or run `bun ../piair/src/main.ts` (`LIGHTAIR_PIAIR=bun`).
-- **Licensing:** PiAir is private and proprietary (MoonGoblin). Dependencies are MIT (Pi) or
-  similarly permissive; `bun pm ls` audit in `docs/licences.md`. Lightair (GPL) and PiAir are
+- **Licensing:** PiAir is open source under the MIT licence (MoonGoblin), like Pi. Dependencies
+  are MIT (Pi) or similarly permissive; `bun pm ls` audit in `docs/licences.md`. Lightair (GPL) and PiAir are
   separate programs talking over a pipe; the desktop's PiAir module (GPL, in the desktop repo)
   only speaks the protocol. Nothing goes into lightair-core.
 

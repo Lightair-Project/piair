@@ -36,3 +36,7 @@ to PiAir as a prompt (or a command: `!on`, `!off`, `!drives`, `!stop`, `!avatar 
 Keys come from Lightair's Keychain (the PiAir panel); for development PiAir also reads
 `GEMINI_API_KEY`, `CARTESIA_API_KEY` and `ELEVENLABS_API_KEY` from its environment. Never put
 keys in files.
+
+## Licence
+
+MIT, © 2026 Bregas S. Wicaksono (MoonGoblin). See [LICENSE](LICENSE).

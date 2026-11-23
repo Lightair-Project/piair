@@ -1,7 +1,7 @@
 # Licences of PiAir's dependencies
 
-PiAir is proprietary (MoonGoblin). Everything it bundles into its binary is under a permissive
-licence: no GPL, LGPL or AGPL code. Checked 23 November 2026 over `node_modules` (`bun install`,
+PiAir is MIT-licensed (`LICENSE`). Every npm package it bundles is under a permissive licence:
+no GPL, LGPL or AGPL code. Checked 23 November 2026 over `node_modules` (`bun install`,
 `bun.lock`), 90 packages:
 
 | Licence | Packages |
