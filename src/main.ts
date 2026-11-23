@@ -62,7 +62,8 @@ on("secrets_changed", async () => {
 });
 
 on("chat", (m) => director.onChat(m.event ?? {}));
-on("heard", (m) => director.onHeard(String(m.text ?? ""), !!m.final));
+on("heard", (m) => director.onHeard(String(m.text ?? ""), !!m.final, m.who ? String(m.who) : undefined));
+on("content", (m) => director.onContent(String(m.text ?? ""), String(m.source ?? "")));
 on("streamer", (m) => director.onStreamer(!!m.speaking));
 on("prompt", (m) => director.onPrompt(String(m.text ?? "")));
 on("voice_state", (m) => director.onVoiceState(String(m.utterance ?? ""), String(m.state ?? "")));

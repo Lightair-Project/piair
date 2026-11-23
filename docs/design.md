@@ -31,8 +31,18 @@ card, Change and Transform come with it:
   step (`crate::piair::with_cohost_voice`). Only the active co-host's track plays the speech.
 - **Its face:** PiAir drives the avatar through `face_drive` instead of a camera (a new co-host
   has no camera); a PNGtuber's mouth follows the level of the co-host's voice track (its `mic`).
+- **Hears** (on the object, `cohost.hears: [{track, role}]`): any mixer tracks but co-host
+  voices, each heard as **conversation** (people talking to it: it waits while they speak,
+  understands them and answers its name; their level is "someone is talking") or **content**
+  (something playing, a video or a game: followed as untrusted context, reacted to now and then,
+  never taken as someone addressing it). Lightair taps each track's sound
+  (`lightair_engine::audio_tap`, 16 kHz mono) into its own on-device speech helper
+  (`lightair-speech - -pcm`). Not set: the first mic, as conversation.
+- **Keys** live in Settings → Connections (one row per service: paste, checked, saved or what's
+  wrong). The Voice section lists the vendor's voices; picking one plays a sample on this
+  computer, never on stream.
 - **Inspector:** the Avatar card with the On switch and the status line, then Talk, Brain,
-  Voice, Persona, Behaviour, then Transform, Effects and Canvases.
+  Voice, Persona, Behaviour, Framing, Accessories, then Transform, Effects and Canvases.
 - **Settings → AI co-host** (about the computer, not an object): AI drives, allowed apps, the
   kill-switch shortcut, and the screenshot rule behind an ⓘ.
 
@@ -75,7 +85,9 @@ silent, the avatar returns to its camera (or rest), and the input executor stops
 | `hello` | `version`, `platform`, `data_dir`, `lightair` (name, version), `settings` (the co-host object's `cohost.piair`) | First line. PiAir applies `settings` over its last ones and answers `ready`. |
 | `secrets` | `values: {name: string}` | The keys PiAir asked for (`secret.get`), from the Keychain. Never logged. |
 | `chat` | `event` (Lightair's `ChatEvent` JSON: platform, user, roles, text, paid…) | A chat message from any platform Lightair aggregates. |
-| `heard` | `text`, `final` | What the streamer said (on-device speech, `lightair-speech`). |
+| `heard` | `text`, `final`, `who` (the track) | What someone said on a track heard as conversation (on-device speech). |
+| `content` | `text`, `source` (the track) | What's said on a track heard as content (a video, a game): untrusted context. |
+| `secrets_changed` | — | Keys were added or removed in Settings → Connections: read them again. |
 | `streamer` | `speaking: bool` | The streamer's mic is above the speech threshold (for turn-taking). |
 | `voice_state` | `utterance`, `state: playing\|done\|cancelled`, `queued_ms` | Playback progress. |
 | `prompt` | `text` | The streamer typed to PiAir in the panel ("say hi to the raiders", "open OBS settings"). Trusted. |
