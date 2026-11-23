@@ -5,6 +5,11 @@ import { call, log } from "./protocol.ts";
 
 const cache = new Map<string, string | null>();
 
+/** Lightair changed keys (Settings → Connections): read them again next time. */
+export function forget() {
+  cache.clear();
+}
+
 export async function getSecret(name: string): Promise<string | undefined> {
   if (cache.has(name)) return cache.get(name) ?? undefined;
   try {

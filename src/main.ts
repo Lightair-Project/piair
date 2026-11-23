@@ -3,7 +3,7 @@ import * as brain from "./brain.ts";
 import * as director from "./director.ts";
 import * as memory from "./memory.ts";
 import { log, on, run, send } from "./protocol.ts";
-import { voiceKey, warm } from "./secrets.ts";
+import { forget, voiceKey, warm } from "./secrets.ts";
 import * as settings from "./settings.ts";
 import { makeVoice } from "./voice/index.ts";
 
@@ -15,7 +15,8 @@ async function applyVoice() {
     const key = await voiceKey(s.voice.vendor);
     const v = await makeVoice(s.voice.vendor, key, s.voice.voice, s.voice.speed, s.persona.language);
     director.setVoice(v);
-    if (!v && s.voice.vendor !== "none") send({ t: "status", state: "error", detail: `No ${s.voice.vendor} key: PiAir writes instead of speaking` });
+    const names: Record<string, string> = { cartesia: "Cartesia", elevenlabs: "ElevenLabs", gemini: "Gemini" };
+    if (!v && s.voice.vendor !== "none") send({ t: "status", state: "error", detail: `No ${names[s.voice.vendor] ?? s.voice.vendor} key: add one in Settings → Connections` });
   } catch (e) {
     log("warn", "voice:", e);
     director.setVoice(null);
@@ -52,6 +53,13 @@ on("login", async (m) => {
 });
 on("auth_code", (m) => brain.authCode(String(m.code ?? "")));
 on("voice_key", async () => applyVoice());
+// keys added or removed in Settings → Connections: read again, voice reconnected
+on("secrets_changed", async () => {
+  forget();
+  await warm(brain.models.getProviders().map((p) => p.id));
+  await applyVoice();
+  send({ t: "providers", providers: await brain.providerList() });
+});
 
 on("chat", (m) => director.onChat(m.event ?? {}));
 on("heard", (m) => director.onHeard(String(m.text ?? ""), !!m.final));

@@ -22,6 +22,7 @@ export class ElevenLabs implements Voice {
   private open(): Promise<WebSocket> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return Promise.resolve(this.ws);
     const voice = this.voice || DEFAULT_VOICES.elevenlabs;
+    if (!voice) return Promise.reject(new Error("ElevenLabs: choose a voice in the co-host's Voice section"));
     this.opening ??= new Promise<WebSocket>((resolve, reject) => {
       const url = `wss://api.elevenlabs.io/v1/text-to-speech/${voice}/multi-stream-input?model_id=${MODEL}&output_format=pcm_${RATE}&inactivity_timeout=180&sync_alignment=true`;
       const ws = new WebSocket(url, { headers: { "xi-api-key": this.key } } as any);

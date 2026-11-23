@@ -30,7 +30,7 @@ export const DEFAULTS: Settings = {
 /** Default voice per vendor (each vendor's own stock voice ids). */
 export const DEFAULT_VOICES: Record<VoiceVendor, string> = {
   cartesia: "", // the first stock voice the account lists (voice/cartesia.ts)
-  elevenlabs: "21m00Tcm4TlvDq8ikWAM", // "Rachel"
+  elevenlabs: "", // chosen in the co-host's Voice section (the account's voices)
   gemini: "Puck",
   none: "",
 };
