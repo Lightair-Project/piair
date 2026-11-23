@@ -8,6 +8,36 @@ Pi's libraries, shipped as one compiled binary inside Lightair.
 Status: built on macOS (23 November 2026); see plan.md for what's left. Measured numbers are in
 [Measurements](#measurements). The plan and milestones are in [plan.md](plan.md).
 
+## 0. The AI co-host is an object (owner, 23 November 2026)
+
+In Lightair the co-host is an **object**: Add object → **AI co-host** (beside Avatar, its own
+Hierarchy icon). It's an avatar object (`lightair_avatar`) whose source settings carry a `cohost`
+block, so it takes every avatar type (VRM/GLB, Live2D, Inochi2D, Umamo, PNGtuber) and the avatar
+card, Change and Transform come with it:
+
+```json
+"cohost": { "on": true, "active": true, "voice_track": "<track id>",
+            "piair": { "provider": …, "model": …, "voice": {…}, "persona": {…}, "behaviour": {…} } }
+```
+
+- **One active co-host.** PiAir runs while the active co-host's object exists and its On switch is
+  on; deleting the object or switching it off stops PiAir. A second co-host says "Another co-host
+  is active" and offers Make active.
+- **Its settings live on the object** (`cohost.piair`), saved with the project and undoable;
+  Lightair passes them to PiAir (`hello.settings`, then `settings` when they change). Keys and
+  sign-ins stay in the Keychain.
+- **Its voice is a mixer track named after the object** ("AI co-host" by default), made with it;
+  removing the object removes the track and renaming the object renames it, in the same undo
+  step (`crate::piair::with_cohost_voice`). Only the active co-host's track plays the speech.
+- **Its face:** PiAir drives the avatar through `face_drive` instead of a camera (a new co-host
+  has no camera); a PNGtuber's mouth follows the level of the co-host's voice track (its `mic`).
+- **Inspector:** the Avatar card with the On switch and the status line, then Talk, Brain,
+  Voice, Persona, Behaviour, then Transform, Effects and Canvases.
+- **Settings → AI co-host** (about the computer, not an object): AI drives, allowed apps, the
+  kill-switch shortcut, and the screenshot rule behind an ⓘ.
+
+The dock panel of the first version is gone; its parts are in the Inspector and Settings.
+
 ## 1. Who owns what
 
 | | PiAir (this repo, private) | Lightair desktop (GPL) |
@@ -42,7 +72,7 @@ silent, the avatar returns to its camera (or rest), and the input executor stops
 
 | `t` | Fields | Meaning |
 |---|---|---|
-| `hello` | `version`, `platform`, `data_dir`, `lightair` (name, version) | First line. PiAir answers `ready`. |
+| `hello` | `version`, `platform`, `data_dir`, `lightair` (name, version), `settings` (the co-host object's `cohost.piair`) | First line. PiAir applies `settings` over its last ones and answers `ready`. |
 | `secrets` | `values: {name: string}` | The keys PiAir asked for (`secret.get`), from the Keychain. Never logged. |
 | `chat` | `event` (Lightair's `ChatEvent` JSON: platform, user, roles, text, paid…) | A chat message from any platform Lightair aggregates. |
 | `heard` | `text`, `final` | What the streamer said (on-device speech, `lightair-speech`). |
@@ -315,8 +345,10 @@ No Hermes code.
 
 ## 9. Settings
 
-PiAir's settings live in `<data_dir>/PiAir/settings.json` (no secrets); Lightair's in its
-preferences (`piair.enabled`, `piair.avatar`, `piair.allowlist`, the kill-switch shortcut).
+The co-host's settings live on its object (`cohost.piair`, §0); PiAir keeps the last ones it was
+given in `<data_dir>/PiAir/settings.json` (no secrets). The computer's (AI drives, allowed apps)
+are Lightair's, in `<data_dir>/PiAir/lightair.json` and Settings → AI co-host; the kill-switch
+shortcut is in Settings → Shortcuts.
 
 | Group | Settings |
 |---|---|
@@ -324,10 +356,10 @@ preferences (`piair.enabled`, `piair.avatar`, `piair.allowlist`, the kill-switch
 | Voice | vendor, voice, speed |
 | Persona | name, personality, language, family friendly |
 | Behaviour | chattiness, answer chat, stop when I talk, listen to me (on-device speech) |
-| Avatar (Lightair) | which avatar is the co-host's |
-| Computer (Lightair) | AI drives (this session), allowed apps, kill-switch shortcut |
+| Avatar (the object) | the avatar it uses (Change), On |
+| Computer (Settings → AI co-host) | AI drives (this session), allowed apps, kill-switch shortcut |
 
-The panel shows label and value only; explanations sit behind ⓘ.
+Label and value only; explanations sit behind ⓘ.
 
 ## 10. Latency budget
 

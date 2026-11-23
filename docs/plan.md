@@ -69,6 +69,15 @@ quiet while the streamer talks; chattiness levels change how often it speaks.
 Done: `/Applications/Lightair.app/Contents/MacOS/piair` is signed (codesign --verify --deep
 passes) and starts from the panel.
 
+## M7. The AI co-host object — done
+
+The owner's change of design (23 November): the co-host as an object (design.md §0). Done when an
+AI co-host can be added from Add object with any library avatar, its Inspector shows the Avatar
+card with On and status then Talk, Brain, Voice, Persona and Behaviour, its voice track comes and
+goes with it (undo included), a second co-host offers Make active, Settings → AI co-host holds the
+computer's settings, and the dock panel is gone. Checked in a development build (captures in the
+notes folder); a PNGtuber co-host not tried (no .lairava file here).
+
 ## Still to do (23 November 2026)
 
 - **Windows computer use:** not built: it must be compiled and tried on Windows, and unverified

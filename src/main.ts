@@ -23,7 +23,9 @@ async function applyVoice() {
 }
 
 on("hello", async (m) => {
-  const s = settings.load(m.data_dir ?? ".");
+  settings.load(m.data_dir ?? ".");
+  // the co-host object's own settings (saved with it in the project) win over the last ones used
+  const s = m.settings && typeof m.settings === "object" ? settings.update(m.settings) : settings.get();
   memory.open(settings.piairDir(), s.memory.keepDays);
   await warm(brain.models.getProviders().map((p) => p.id));
   await applyVoice();
