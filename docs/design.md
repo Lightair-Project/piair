@@ -197,6 +197,14 @@ exactly as it is.
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
   their terminal questions for a desktop (browser login, github.com).
+- **Which models:** Pi's catalog is fixed at a pi-ai release (old models, none newer).
+  `src/catalog.ts` asks each provider for its current list where there's a key or sign-in
+  (OpenRouter's public list always): models it no longer lists are left out, new ones are added
+  (made from the closest catalog model, so they're called the same way), newest first by the
+  provider's dates. Without a list: the catalog newest first by version, without dated snapshots.
+  Never offered: speech, image, embedding, research and batch-only models. Lists are fetched after
+  `ready` (the panel's list is replaced when they come) and again when keys change, at most every
+  30 minutes.
 - **Identity:** `identity: { attribution: { name: "Lightair PiAir", url: "https://lightair.app" } }`.
 - **Two agents:**
   - **The co-host** (talking): a rolling conversation, short replies, no thinking (`reasoning:

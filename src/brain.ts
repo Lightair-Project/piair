@@ -19,6 +19,7 @@ import { lightairTools } from "./tools/lightair.ts";
 import { talkTools } from "./tools/talk.ts";
 import type { Source, Tool } from "./tools/types.ts";
 import * as memory from "./memory.ts";
+import * as catalog from "./catalog.ts";
 
 // subscriptions' sign-in code, in the binary: Pi otherwise loads it from its own files at a path
 // a compiled binary doesn't have
@@ -43,9 +44,16 @@ export async function providerList() {
     try {
       signedIn = !!(await models.checkAuth(p.id));
     } catch {}
-    out.push({ id: p.id, name: (p as any).name ?? p.id, auth, signedIn, models: models.getModels(p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
+    out.push({ id: p.id, name: (p as any).name ?? p.id, auth, signedIn, models: catalog.current(models as any, p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
   }
   return out;
+}
+
+/** Asks providers for their current models (OpenRouter's always, others with a key or sign-in).
+ * True when a list changed, so the panel's should be sent again. */
+export async function refreshCatalog(fresh = false): Promise<boolean> {
+  if (fresh) catalog.forget();
+  return catalog.refresh(models as any, models.getProviders().map((p) => p.id));
 }
 
 /** Development: PIAIR_FAUX=1 answers every turn with a scripted line (Pi's faux provider), so the
@@ -56,7 +64,7 @@ if (faux) models.setProvider(faux.provider);
 export function currentModel(): Model<any> {
   if (faux) return faux.getModel();
   const s = settings.get();
-  const m = models.getModel(s.provider, s.model) ?? models.getModels(s.provider)[0];
+  const m = catalog.find(models as any, s.provider, s.model) ?? catalog.current(models as any, s.provider)[0];
   if (!m) throw new Error(`No model ${s.provider}/${s.model}`);
   return m;
 }

@@ -31,6 +31,8 @@ on("hello", async (m) => {
   await warm(brain.models.getProviders().map((p) => p.id));
   await applyVoice();
   send({ t: "ready", version: VERSION, settings: settings.get(), providers: await brain.providerList() });
+  // the providers' current model lists, after: the panel's list is replaced when they come
+  void brain.refreshCatalog().then(async (changed) => changed && send({ t: "providers", providers: await brain.providerList() }));
   log("info", `PiAir ${VERSION} ready (${s.provider}/${s.model}, voice ${s.voice.vendor})`);
 });
 
@@ -59,6 +61,7 @@ on("secrets_changed", async () => {
   await warm(brain.models.getProviders().map((p) => p.id));
   await applyVoice();
   send({ t: "providers", providers: await brain.providerList() });
+  if (await brain.refreshCatalog(true)) send({ t: "providers", providers: await brain.providerList() });
 });
 
 on("chat", (m) => director.onChat(m.event ?? {}));
