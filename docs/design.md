@@ -266,8 +266,9 @@ exactly as it is.
   mouth follows the sound; quiet frames dropped so it rests between lines). Barge-in: a `streamer
   speaking` message clears the outgoing buffer. It uses the streamer's own Codex ChatGPT sign-in
   (`~/.codex/auth.json`) the Codex CLI's way, off by default, for their own machine; there is no
-  supported API. node-datachannel's addon is imported from the per-target package so Bun embeds it
-  (arm64 macOS for now).
+  supported API. Works on every target: `scripts/build.ts` embeds the matching
+  `@node-datachannel/<platform>` addon per build (`src/ndc.ts` is swapped in; the host platform's
+  package is in node_modules, a cross-target one fetched from npm), and opusscript is WASM.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers

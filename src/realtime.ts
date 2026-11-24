@@ -9,11 +9,9 @@
 // (`~/.codex/auth.json`). This uses the streamer's own Codex login, as their CLI does; it is
 // off by default and only for their own machine (there's no supported API for it).
 //
-// node-datachannel's native addon loads only from the compiled binary (it's statically imported so
-// Bun embeds it; the dynamic loader in the npm wrapper can't find it inside the bundle). arm64 macOS
-// for now — other targets would import their own platform addon.
-// @ts-ignore no types for the raw addon
-import rtc from "@node-datachannel/darwin-arm64/node_datachannel.node";
+// node-datachannel's native addon is embedded per platform by scripts/build.ts (src/ndc.ts), so
+// realtime voice works on every target PiAir ships to; it loads only from the compiled binary.
+import rtc from "./ndc.ts";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -58,6 +56,7 @@ async function codexTokens(): Promise<{ access: string; account: string }> {
 }
 
 export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
+  if (!rtc) throw new Error("Realtime voice runs only in the built app, not a development run.");
   const OpusScript = (await import("opusscript")).default;
 
   const app = spawn(opts.codexBin, ["app-server"], { stdio: ["pipe", "pipe", "ignore"] });
