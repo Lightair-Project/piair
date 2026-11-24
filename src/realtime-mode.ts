@@ -14,6 +14,11 @@ let utterance: string | null = null;
 let seq = 0;
 /** The model is speaking (from its transcript stream): the call's audio is forwarded only then. */
 let speaking = false;
+/** The model's answer to the briefing ("Okay") is kept off the air: a reply that starts before
+ * anyone has said or typed anything, soon after the call comes up. */
+let upAt = 0;
+let spoken = false;
+let offAir = false;
 
 export function isOn(): boolean {
   return settings.get().voice.vendor === "codex";
@@ -21,6 +26,25 @@ export function isOn(): boolean {
 
 export function running(): boolean {
   return session !== null;
+}
+
+/** The briefing said into the call as it comes up: the model takes its identity from this (not
+ * from the instruction fields). Framed as stage directions so it doesn't answer it as if someone
+ * named the co-host had spoken. */
+function brief(): string {
+  const p = settings.get().persona;
+  return [
+    `[Stage directions from the show's producer. Nobody said this out loud: don't answer it or mention it, just take on the role.]`,
+    `For the rest of this conversation you ARE ${p.name}, the streamer's co-host on a live stream. ${p.name} is your name and your identity. When anyone asks your name or who you are, you say you're ${p.name}.`,
+    `You never call yourself ChatGPT, an assistant or an AI made by OpenAI; you never mention ChatGPT or OpenAI. Nobody else in this conversation is called ${p.name}: that's you.`,
+    `${p.name}'s personality: ${p.personality}`,
+    `Always speak ${p.language}.`,
+    p.familyFriendly ? "Keep it family friendly: no swearing, nothing sexual or gory." : "",
+    "Talk with the streamer and their chat like a co-host: warm, quick, natural, never like an assistant offering help or menus. One or two short sentences. Wait for someone to talk to you; if there's nothing worth saying, stay quiet. You only ever speak as yourself, never for the streamer or anyone else.",
+    "Acknowledge these directions with only the word \"Okay\" and nothing else.",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** The co-host's spoken instructions for the live model. */
@@ -43,6 +67,14 @@ function instructions(): string {
 function onSpeaking(active: boolean) {
   if (active === speaking) return;
   speaking = active;
+  if (active && !spoken && upAt && Date.now() - upAt < 8000) {
+    offAir = true;
+    return;
+  }
+  if (offAir) {
+    if (!active) offAir = false;
+    return;
+  }
   if (active) {
     utterance = `rt-${Date.now()}`;
     seq = 0;
@@ -69,16 +101,28 @@ export async function apply(): Promise<void> {
     starting = true;
     try {
       const codexBin = await findBinary("codex");
+      (upAt = 0), (spoken = false), (offAir = false);
       if (!codexBin) throw new Error("Codex isn't installed: realtime voice uses your ChatGPT plan through the Codex app");
       session = await startRealtime({
         instructions: instructions(),
+        brief: brief(),
         voice: settings.get().voice.voice || "cove",
         codexBin,
         cwd: settings.piairDir(),
         onVoice,
         onSpeaking,
-        onTranscript: (role, text) => send({ t: "transcript", role, text }),
-        onStatus: (state, detail) => send({ t: "status", state, ...(detail ? { detail } : {}) }),
+        onTranscript: (role, text) => {
+          if (role !== "piair") spoken = true;
+          else if (offAir) return;
+          // PIAIR_DEBUG=1: what the model heard and said, in the log (checks)
+          if (process.env.PIAIR_DEBUG) log("info", `realtime ${role}: ${text}`);
+          send({ t: "transcript", role, text });
+        },
+        onStatus: (state, detail) => {
+          // the call is up and briefed
+          if (state === "listening" && !upAt) upAt = Date.now();
+          send({ t: "status", state, ...(detail ? { detail } : {}) });
+        },
         onError: (message) => send({ t: "status", state: "error", detail: message }),
       });
     } catch (e) {
@@ -99,6 +143,7 @@ export function pushAudio(pcm: Int16Array) {
 
 /** The streamer typed to the co-host (the Talk box): say it into the call. */
 export function prompt(text: string) {
+  spoken = true;
   session?.sendText(text);
 }
 

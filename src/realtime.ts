@@ -25,6 +25,8 @@ const MODEL = "gpt-live-1.1-codex";
 export interface RealtimeOptions {
   /** The co-host's spoken instructions (persona, rules, language). */
   instructions: string;
+  /** The persona briefing said into the call once it's up (what the model actually follows). */
+  brief: string;
   /** An OpenAI realtime voice id (e.g. "cove", "marin"). */
   voice: string;
   /** Codex's binary, to run its app-server (the CLI brain found it). */
@@ -230,8 +232,8 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
     transport: { type: "existingCall", callId },
   });
   // the model ignores the instruction fields but takes its identity from a conversation turn, so
-  // brief it as a developer message right after the call comes up (it adopts the persona, quietly)
-  void req("thread/realtime/appendText", { threadId: thread.id, role: "developer", text: opts.instructions });
+  // brief it as a developer message right after the call comes up (it adopts the persona)
+  void req("thread/realtime/appendText", { threadId: thread.id, role: "developer", text: opts.brief });
   log("info", `realtime voice up (${opts.voice})`);
   opts.onStatus("listening");
 
