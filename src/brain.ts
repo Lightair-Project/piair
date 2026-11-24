@@ -9,11 +9,10 @@ import { githubCopilotProvider } from "@earendil-works/pi-ai/providers/github-co
 import { googleProvider } from "@earendil-works/pi-ai/providers/google";
 import { groqProvider } from "@earendil-works/pi-ai/providers/groq";
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
-import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
 import { xaiProvider } from "@earendil-works/pi-ai/providers/xai";
 import { log, send } from "./protocol.ts";
-import { store } from "./secrets.ts";
+import { getSecret, setSecret, store } from "./secrets.ts";
 import * as settings from "./settings.ts";
 import { computerTools } from "./tools/computer.ts";
 import { lightairTools } from "./tools/lightair.ts";
@@ -29,13 +28,9 @@ export const models = createModels({
   credentials: store,
   identity: { attribution: { name: "Lightair PiAir", url: "https://lightair.app" } },
 });
-for (const p of [anthropicProvider(), openaiProvider(), googleProvider(), openrouterProvider(), groqProvider(), cerebrasProvider(), xaiProvider(), githubCopilotProvider(), openaiCodexProvider()]) {
+for (const p of [anthropicProvider(), openaiProvider(), googleProvider(), openrouterProvider(), groqProvider(), cerebrasProvider(), xaiProvider(), githubCopilotProvider()]) {
   models.setProvider(p);
 }
-
-/** Names people know a provider by, where Pi's are a developer's ("OpenAI Codex" is signing in
- * with ChatGPT). */
-const NAMES: Record<string, string> = { "openai-codex": "ChatGPT" };
 
 /** Providers for the panel: id, name, how they sign in, models. */
 export async function providerList() {
@@ -48,7 +43,7 @@ export async function providerList() {
     try {
       signedIn = !!(await models.checkAuth(p.id));
     } catch {}
-    out.push({ id: p.id, name: NAMES[p.id] ?? (p as any).name ?? p.id, auth, signedIn, models: models.getModels(p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
+    out.push({ id: p.id, name: (p as any).name ?? p.id, auth, signedIn, models: models.getModels(p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
   }
   return out;
 }
@@ -298,6 +293,14 @@ export async function login(provider: string, kind: "oauth" | "api_key", key?: s
     await store.modify(provider, async () => ({ type: "api_key", key }));
     return;
   }
+  // some providers want to know this install (Sign in with ChatGPT): an id made once, kept with
+  // the credentials
+  let deviceId = await getSecret("device:id");
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    await setSecret("device:id", deviceId);
+  }
+  const loginOptions = { getDeviceId: () => deviceId!, agentName: "Lightair" };
   await models.login(provider, "oauth", {
     prompt: async (p: any) => {
       // questions for terminals, answered for a desktop: sign in in the browser (not "headless"),
@@ -314,7 +317,7 @@ export async function login(provider: string, kind: "oauth" | "api_key", key?: s
       else if (ev.type === "device_code") send({ t: "auth", provider, url: ev.verificationUri, code: ev.userCode, message: "Enter this code on the page" });
       else if (ev.message) send({ t: "auth", provider, message: ev.message });
     },
-  });
+  }, loginOptions);
   send({ t: "auth", provider, message: "Signed in", done: true });
 }
 
