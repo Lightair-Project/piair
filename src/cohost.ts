@@ -33,6 +33,8 @@ on("hello", async (m) => {
   send({ t: "ready", version: VERSION, settings: settings.get(), providers: await brain.providerList() });
   // the providers' current model lists, after: the panel's list is replaced when they come
   void brain.refreshCatalog().then(async (changed) => changed && send({ t: "providers", providers: await brain.providerList() }));
+  // the streamer's AI apps on this computer
+  void brain.refreshClis().then(async (changed) => changed && send({ t: "providers", providers: await brain.providerList() }));
   log("info", `PiAir ${VERSION} ready (${s.provider}/${s.model}, voice ${s.voice.vendor})`);
 });
 
@@ -43,7 +45,10 @@ on("settings", async (m) => {
   send({ t: "settings", values: s });
 });
 
-on("providers", async () => send({ t: "providers", providers: await brain.providerList() }));
+on("providers", async () => {
+  await brain.refreshClis();
+  send({ t: "providers", providers: await brain.providerList() });
+});
 on("login", async (m) => {
   try {
     await brain.login(m.provider, m.kind ?? "oauth", m.key);

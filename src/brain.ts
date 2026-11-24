@@ -20,6 +20,7 @@ import { talkTools } from "./tools/talk.ts";
 import type { Source, Tool } from "./tools/types.ts";
 import * as memory from "./memory.ts";
 import * as catalog from "./catalog.ts";
+import * as cli from "./cli.ts";
 
 // subscriptions' sign-in code, in the binary: Pi otherwise loads it from its own files at a path
 // a compiled binary doesn't have
@@ -46,7 +47,35 @@ export async function providerList() {
     } catch {}
     out.push({ id: p.id, name: (p as any).name ?? p.id, auth, signedIn, models: catalog.current(models as any, p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
   }
+  // the streamer's own AI apps on this computer (their plans): they talk, but use no tools
+  for (const c of clis) {
+    out.push({
+      id: `cli:${c.name}`,
+      name: `${cli.label(c.name)} app`,
+      auth: ["cli"],
+      signedIn: c.signedIn,
+      hint: c.signedIn ? "" : `Sign in: run "${c.login}" in Terminal, then choose it again`,
+      models: c.models.map((m) => ({ id: m.id, name: m.name, images: false })),
+    });
+  }
   return out;
+}
+
+/** The AI apps on this computer, as last looked for. */
+let clis: cli.CliStatus[] = [];
+
+/** Looks for the streamer's AI apps (installed, signed in, their models). True when that changed. */
+export async function refreshClis(): Promise<boolean> {
+  const found = await cli.detect().catch(() => [] as cli.CliStatus[]);
+  const changed = JSON.stringify(found) !== JSON.stringify(clis);
+  clis = found;
+  return changed;
+}
+
+/** The co-host's brain is one of the streamer's AI apps (`cli:<name>`): its name, else null. */
+export function cliBrain(): cli.CliName | null {
+  const p = settings.get().provider;
+  return p.startsWith("cli:") ? (p.slice(4) as cli.CliName) : null;
 }
 
 /** Asks providers for their current models (OpenRouter's always, others with a key or sign-in).
@@ -63,6 +92,7 @@ if (faux) models.setProvider(faux.provider);
 
 export function currentModel(): Model<any> {
   if (faux) return faux.getModel();
+  if (cliBrain()) throw new Error("The co-host's brain is an AI app, not a model");
   const s = settings.get();
   const m = catalog.find(models as any, s.provider, s.model) ?? catalog.current(models as any, s.provider)[0];
   if (!m) throw new Error(`No model ${s.provider}/${s.model}`);
@@ -168,8 +198,31 @@ function attach(agent: Agent, io: () => TurnIO | null) {
   });
 }
 
+/** The conversation so far with an AI app brain (each turn runs the app afresh, so it's sent along). */
+let cliHistory: { who: "them" | "you"; text: string }[] = [];
+
+/** One turn with an AI app as the brain: the conversation so far and the new prompt, as one
+ * message; the reply streams to `io`. It can't use tools. */
+async function cliTurn(name: cli.CliName, prompt: string, io: TurnIO, signal: AbortSignal) {
+  const system = `${systemPrompt(false)}\n\nIn this mode you have no tools: you can't remember notes, change Lightair or use the computer. Just talk. If asked to do something, say you can't from here.`;
+  const past = cliHistory
+    .slice(-16)
+    .map((h) => `${h.who === "you" ? "You said" : "Then"}: ${h.text}`)
+    .join("\n");
+  const message = `${past ? `The conversation so far:\n${past}\n\n` : ""}Now: ${prompt}\n\nReply with only what you'll say out loud.`;
+  let reply = "";
+  for await (const piece of cli.generate(name, settings.get().model, system, message, signal)) {
+    reply += piece;
+    io.onText(piece);
+  }
+  cliHistory.push({ who: "them", text: prompt.slice(0, 1200) }, { who: "you", text: reply.trim().slice(0, 600) });
+  if (cliHistory.length > 40) cliHistory = cliHistory.slice(-32);
+}
+
 /** Runs one co-host turn. Resolves when the model is done (speech may still be playing). */
 export async function cohostTurn(source: Source, prompt: string, io: TurnIO, signal: AbortSignal) {
+  const app = cliBrain();
+  if (app && !faux) return cliTurn(app, prompt, io, signal);
   if (!cohost) {
     cohost = makeCohost();
     attach(cohost, () => currentIO);
@@ -233,6 +286,7 @@ export async function runTaskFor(goal: string, io: TurnIO, signal: AbortSignal):
 }
 
 async function runTask(goal: string, io: TurnIO | null, outer?: AbortSignal): Promise<string> {
+  if (cliBrain()) return "With an AI app as my brain I can't use the computer. Choose a model provider in my Brain section for that.";
   const model = currentModel();
   if (!model.input.includes("image")) return `The model ${model.id} can't see images, so it can't use the computer. Pick a model that takes images.`;
   const tools = [...computerTools(), ...lightairTools()];
@@ -279,6 +333,8 @@ async function runTask(goal: string, io: TurnIO | null, outer?: AbortSignal): Pr
 /** Updates a viewer's note from something they said about themselves (after the turn, off the
  * reply's path). Returns the new note, or null when there was nothing worth keeping. */
 export async function noteFromChat(who: string, said: string, current: string): Promise<string | null> {
+  // an AI app brain: no notes (a call each would cost the app's whole setup)
+  if (cliBrain()) return null;
   const r = await models.completeSimple(currentModel(), {
     systemPrompt:
       "You keep short notes about viewers of a live stream so the co-host remembers them next time. Facts only, third person, in your own words: their name or nickname, what they like, pets, running jokes. Never keep contact details, addresses, ages of minors, passwords, links or anything sensitive.",

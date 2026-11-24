@@ -197,6 +197,16 @@ exactly as it is.
   one and keeps it in the Keychain (`device:id`), and introduces itself as Lightair. When the
   co-host's provider isn't signed in but another subscription is, its Brain section offers to
   switch to it.
+- **The streamer's AI apps as the brain** (`src/cli.ts`, ported from Ainotra's bridge): Claude
+  Code, Codex, Antigravity and Grok on this computer, on their own plans, the supported way. Each
+  reply runs the app once in its print mode (`claude -p`, `codex exec --json`, `agy -p`,
+  `grok -p`) in an empty scratch folder, with a scrubbed environment (no keys) and none of its
+  tools; the conversation so far goes along. Offered as providers `cli:<app>` with the models the
+  app's plan offers (its own catalog on disk, or its models command) and its sign-in state (how to
+  sign in when it isn't). They talk only: no memory notes, Lightair actions or computer tasks (a
+  task asked for says to choose a model provider). Claude Code is the quickest (~750 tokens of
+  setup, first words in about 1.4 s); Codex and Antigravity carry ~12–15k tokens of their own.
+  Pi's own sign-ins (Settings → Subscriptions) stay alongside.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
