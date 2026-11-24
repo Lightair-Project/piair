@@ -2,6 +2,7 @@
 // does computer and Lightair work step by step, with screenshots, and narrates briefly.
 import { Agent, type AgentEvent } from "@earendil-works/pi-agent-core";
 import { createModels, fauxAssistantMessage, fauxProvider, fauxText, type Model } from "@earendil-works/pi-ai";
+import { registerBunOAuthFlows } from "@earendil-works/pi-ai/bun-oauth";
 import { anthropicProvider } from "@earendil-works/pi-ai/providers/anthropic";
 import { cerebrasProvider } from "@earendil-works/pi-ai/providers/cerebras";
 import { githubCopilotProvider } from "@earendil-works/pi-ai/providers/github-copilot";
@@ -19,6 +20,10 @@ import { lightairTools } from "./tools/lightair.ts";
 import { talkTools } from "./tools/talk.ts";
 import type { Source, Tool } from "./tools/types.ts";
 import * as memory from "./memory.ts";
+
+// subscriptions' sign-in code, in the binary: Pi otherwise loads it from its own files at a path
+// a compiled binary doesn't have
+registerBunOAuthFlows();
 
 export const models = createModels({
   credentials: store,
@@ -291,6 +296,10 @@ export async function login(provider: string, kind: "oauth" | "api_key", key?: s
   }
   await models.login(provider, "oauth", {
     prompt: async (p: any) => {
+      // questions for terminals, answered for a desktop: sign in in the browser (not "headless"),
+      // on github.com (not GitHub Enterprise)
+      if (p.type === "select" && p.options?.some((o: any) => o.id === "browser")) return "browser";
+      if (p.type === "text" && /enterprise/i.test(p.message ?? "")) return "";
       // a choice (which account kind) comes with its options; anything else wants a code pasted
       const options = p.type === "select" ? (p.options ?? []).map((o: any) => ({ id: o.id, label: o.label })) : undefined;
       send({ t: "auth", provider, message: p.message ?? "Paste the code from the sign-in page", prompt: true, ...(options ? { options } : {}) });
