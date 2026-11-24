@@ -2,7 +2,9 @@
 import { mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
 
-export type VoiceVendor = "cartesia" | "elevenlabs" | "gemini" | "none";
+// "codex" is realtime voice: ChatGPT's live model hears and speaks over a call (src/realtime.ts),
+// not a text-to-speech vendor.
+export type VoiceVendor = "cartesia" | "elevenlabs" | "gemini" | "codex" | "none";
 
 export interface Settings {
   provider: string;
@@ -32,6 +34,7 @@ export const DEFAULT_VOICES: Record<VoiceVendor, string> = {
   cartesia: "", // the first stock voice the account lists (voice/cartesia.ts)
   elevenlabs: "", // chosen in the co-host's Voice section (the account's voices)
   gemini: "Puck",
+  codex: "cove", // an OpenAI realtime voice
   none: "",
 };
 

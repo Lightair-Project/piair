@@ -307,7 +307,7 @@ function searchDirs(): string[] {
   return [join(home, ".local", "bin"), "/usr/local/bin", "/opt/homebrew/bin", join(home, ".npm-global", "bin"), join(home, ".bun", "bin"), join(home, ".volta", "bin"), join(home, ".grok", "bin")];
 }
 
-async function findBinary(name: string): Promise<string | null> {
+export async function findBinary(name: string): Promise<string | null> {
   const names = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   for (const dir of [...(process.env.PATH ?? "").split(delimiter), ...searchDirs()].filter(Boolean)) {
     for (const n of names) {

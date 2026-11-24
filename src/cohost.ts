@@ -6,11 +6,19 @@ import { log, on, run, send } from "./protocol.ts";
 import { forget, voiceKey, warm } from "./secrets.ts";
 import * as settings from "./settings.ts";
 import { makeVoice } from "./voice/index.ts";
+import * as realtime from "./realtime-mode.ts";
 
 export const VERSION = "0.1.0";
 
 async function applyVoice() {
   const s = settings.get();
+  // realtime voice (the live model hears and speaks over a call) instead of a text-to-speech vendor
+  if (s.voice.vendor === "codex") {
+    director.setVoice(null);
+    await realtime.apply();
+    return;
+  }
+  if (realtime.running()) await realtime.stop();
   try {
     const key = await voiceKey(s.voice.vendor);
     const v = await makeVoice(s.voice.vendor, key, s.voice.voice, s.voice.speed, s.persona.language);
@@ -71,8 +79,14 @@ on("secrets_changed", async () => {
 
 on("chat", (m) => director.onChat(m.event ?? {}));
 on("heard", (m) => director.onHeard(String(m.text ?? ""), !!m.final, m.who ? String(m.who) : undefined));
+// realtime voice: raw heard audio (16 kHz mono s16le, base64) goes straight up the call
+on("audio", (m) => {
+  if (!realtime.running()) return;
+  const b = Buffer.from(String(m.pcm ?? ""), "base64");
+  realtime.pushAudio(new Int16Array(b.buffer, b.byteOffset, Math.floor(b.byteLength / 2)));
+});
 on("content", (m) => director.onContent(String(m.text ?? ""), String(m.source ?? "")));
-on("streamer", (m) => director.onStreamer(!!m.speaking));
+on("streamer", (m) => { director.onStreamer(!!m.speaking); if (m.speaking) realtime.interrupt(); });
 on("prompt", (m) => director.onPrompt(String(m.text ?? "")));
 on("voice_state", (m) => director.onVoiceState(String(m.utterance ?? ""), String(m.state ?? "")));
 on("stop", () => director.stop());

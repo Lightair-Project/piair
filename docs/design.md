@@ -258,6 +258,16 @@ exactly as it is.
      RTP (payload type 111): heard PCM up, Codex's voice down, decoded and sent to Lightair as the
      usual `voice` messages (the mouth follows the sound). `node-datachannel`'s `.node` addon loads
      only in the compiled binary, not under `bun run`.
+- **Realtime voice** (`src/realtime.ts`, `src/realtime-mode.ts`; voice vendor `codex`): the live
+  model hears and speaks over the call instead of the text brain + speech-to-text + text-to-speech.
+  On when the co-host's voice is "ChatGPT voice"; Lightair streams the heard conversation audio as
+  `audio` messages (16 kHz mono s16le, base64), PiAir upsamples to 48 kHz stereo Opus up the call,
+  and the model's voice comes back as the usual `voice` messages (48 kHz mono; no marks, so the
+  mouth follows the sound; quiet frames dropped so it rests between lines). Barge-in: a `streamer
+  speaking` message clears the outgoing buffer. It uses the streamer's own Codex ChatGPT sign-in
+  (`~/.codex/auth.json`) the Codex CLI's way, off by default, for their own machine; there is no
+  supported API. node-datachannel's addon is imported from the per-target package so Bun embeds it
+  (arm64 macOS for now).
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
