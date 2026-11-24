@@ -96,6 +96,11 @@ export function pushAudio(pcm: Int16Array) {
   session?.pushAudio(pcm);
 }
 
+/** The streamer typed to the co-host (the Talk box): say it into the call. */
+export function prompt(text: string) {
+  session?.sendText(text);
+}
+
 /** The streamer started talking: interrupt the model and cut what it's saying now (barge-in). */
 export function interrupt() {
   session?.interrupt();

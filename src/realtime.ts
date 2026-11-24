@@ -47,6 +47,8 @@ export interface Realtime {
   pushAudio(pcm: Int16Array): void;
   /** Interrupt the model (the streamer started talking). */
   interrupt(): void;
+  /** A typed message from the streamer, said into the call as a user turn. */
+  sendText(text: string): void;
   stop(): Promise<void>;
 }
 
@@ -255,6 +257,9 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
     },
     interrupt() {
       pending = [];
+    },
+    sendText(text: string) {
+      void req("thread/realtime/appendText", { threadId: thread.id, text });
     },
     async stop() {
       clearInterval(timer);

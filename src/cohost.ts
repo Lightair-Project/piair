@@ -87,7 +87,7 @@ on("audio", (m) => {
 });
 on("content", (m) => director.onContent(String(m.text ?? ""), String(m.source ?? "")));
 on("streamer", (m) => { director.onStreamer(!!m.speaking); if (m.speaking) realtime.interrupt(); });
-on("prompt", (m) => director.onPrompt(String(m.text ?? "")));
+on("prompt", (m) => { const text = String(m.text ?? ""); if (realtime.running()) realtime.prompt(text); else director.onPrompt(text); });
 on("voice_state", (m) => director.onVoiceState(String(m.utterance ?? ""), String(m.state ?? "")));
 on("stop", () => director.stop());
 on("computer", (m) => {
