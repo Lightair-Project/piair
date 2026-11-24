@@ -37,7 +37,10 @@ card, Change and Transform come with it:
   (something playing, a video or a game: followed as untrusted context, reacted to now and then,
   never taken as someone addressing it). Lightair taps each track's sound
   (`lightair_engine::audio_tap`, 16 kHz mono) into its own on-device speech helper
-  (`lightair-speech - -pcm`). Not set: the first mic, as conversation.
+  (`lightair-speech - -pcm`). Not set: the first mic, as conversation. Under each heard track
+  the Inspector says how it's going: Listening, the words it last made out, no sound coming in,
+  or why it can't hear (the helper's `READY`/`ERROR` lines; a helper that stops is started again
+  after five seconds, not in a loop).
 - **Keys** live in Settings → Connections (one row per service: paste, checked, saved or what's
   wrong). The Voice section lists the vendor's voices; picking one plays a sample on this
   computer, never on stream.
