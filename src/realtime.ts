@@ -131,10 +131,9 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
   const track = pc.addTrack(audio);
   pc.createDataChannel("oai-events");
 
-  // the model's voice in (48 kHz stereo Opus → 48 kHz mono s16le). Packets arrive a little bursty
-  // (decode + the pipe add jitter), so they go into a queue that a steady 20 ms timer drains: the
-  // engine gets an even feed with no underruns, which is what caused the clicks.
-  const incoming: number[] = [];
+  // the model's voice in (48 kHz stereo Opus → 48 kHz mono s16le), passed on as each packet comes:
+  // Lightair's voice source holds a short lead, which evens out the network's unevenness (a timer
+  // here drifted, and its catching up dropped sound)
   track.onMessage((pkt: Buffer) => {
     const b = Buffer.from(pkt);
     const cc = b[0]! & 0x0f;
@@ -149,22 +148,10 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
       return;
     }
     const s = new Int16Array(stereo.buffer, stereo.byteOffset, stereo.byteLength / 2);
-    for (let i = 0; i < s.length; i += 2) incoming.push((s[i]! + s[i + 1]!) >> 1);
-    if (incoming.length > 48000) incoming.splice(0, incoming.length - 24000); // never fall far behind
+    const mono = new Int16Array(s.length / 2);
+    for (let i = 0; i < mono.length; i++) mono[i] = (s[i * 2]! + s[i * 2 + 1]!) >> 1;
+    opts.onVoice(mono);
   });
-  // ~60 ms of lead so a short burst can't starve the feed, then a steady 20 ms (960-sample) cadence
-  let primed = false;
-  const playTimer = setInterval(() => {
-    if (!primed) {
-      if (incoming.length < 2880) return;
-      primed = true;
-    }
-    if (incoming.length < 960) {
-      if (incoming.length === 0) primed = false;
-      return;
-    }
-    opts.onVoice(Int16Array.from(incoming.splice(0, 960)));
-  }, 20);
 
   const offer: string = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("timed out gathering the call")), 15000);
@@ -237,29 +224,22 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
   log("info", `realtime voice up (${opts.voice})`);
   opts.onStatus("listening");
 
-  // --- heard audio up the call: 16 kHz mono in, 48 kHz stereo Opus out, a steady 20 ms RTP stream
+  // --- heard audio up the call: 16 kHz mono in, 48 kHz stereo Opus out, 20 ms RTP packets sent as
+  // the audio comes. Lightair sends it only while someone is talking, so in silence nothing goes up
+  // the call (the model isn't kept listening to an empty room); the RTP clock follows the wall
+  // clock across those gaps.
   const enc = new OpusScript(48000, 2, OpusScript.Application.AUDIO);
-  const silence = enc.encode(Buffer.from(new Int16Array(960 * 2).buffer), 960);
   let pending: number[] = []; // 48 kHz mono samples waiting to be sent
   let seq = 0;
   let ts = 0;
-  let overflow = false;
-
-  const timer = setInterval(() => {
-    if (!track.isOpen()) return;
-    let payload: Buffer;
-    if (pending.length >= 960) {
-      const mono = pending.slice(0, 960);
-      pending = pending.length > 48000 ? [] : pending.slice(960); // drop if we fall badly behind
-      const stereo = new Int16Array(960 * 2);
-      for (let i = 0; i < 960; i++) {
-        stereo[i * 2] = mono[i]!;
-        stereo[i * 2 + 1] = mono[i]!;
-      }
-      payload = enc.encode(Buffer.from(stereo.buffer), 960);
-    } else {
-      payload = silence;
-    }
+  const t0 = performance.now();
+  const sendPacket = (mono: number[]) => {
+    const stereo = new Int16Array(960 * 2);
+    for (let i = 0; i < 960; i++) stereo[i * 2] = stereo[i * 2 + 1] = mono[i]!;
+    const payload = enc.encode(Buffer.from(stereo.buffer), 960);
+    // after a gap, the timestamp catches up with the time that passed
+    const wall = Math.round((performance.now() - t0) * 48);
+    if (wall - ts > 4800) ts = wall;
     const h = Buffer.alloc(12);
     h[0] = 0x80;
     h[1] = OPUS_PT;
@@ -270,8 +250,7 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
     try {
       track.sendMessageBinary(Buffer.concat([h, payload]));
     } catch {}
-  }, 20);
-  void overflow;
+  };
 
   return {
     pushAudio(pcm: Int16Array) {
@@ -281,7 +260,11 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
         const b = i + 1 < pcm.length ? pcm[i + 1]! : a;
         pending.push(a, (a * 2 + b) / 3, (a + b * 2) / 3);
       }
-      if (pending.length > 48000) pending = pending.slice(-24000);
+      if (!track.isOpen()) {
+        pending = pending.slice(-9600);
+        return;
+      }
+      while (pending.length >= 960) sendPacket(pending.splice(0, 960));
     },
     interrupt() {
       pending = [];
@@ -290,8 +273,6 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
       void req("thread/realtime/appendText", { threadId: thread.id, text });
     },
     async stop() {
-      clearInterval(timer);
-      clearInterval(playTimer);
       try {
         await req("thread/realtime/stop", { threadId: thread.id });
       } catch {}
