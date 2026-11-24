@@ -207,6 +207,18 @@ exactly as it is.
   task asked for says to choose a model provider). Claude Code is the quickest (~750 tokens of
   setup, first words in about 1.4 s); Codex and Antigravity carry ~12–15k tokens of their own.
   Pi's own sign-ins (Settings → Subscriptions) stay alongside.
+- **Codex's voice mode for the co-host: tried, not open to other apps (24 November 2026, codex
+  0.172).** Codex's app-server has a realtime voice API (`thread/realtime/start`, `appendAudio`,
+  `outputAudio/delta`; `--experimental` in its schema, `capabilities.experimentalApi`). On a
+  ChatGPT plan: the `websocket` transport answers "realtime conversation requires API key auth"
+  (any protocol version); the `webrtc` transport with `version: v3` creates the call and returns
+  an SDP answer (ICE-lite servers on UDP 3478), but the servers never answer the connectivity
+  checks, from libdatachannel or from Chromium alike, and Codex's own attach to the call
+  (`wss://api.openai.com/v1/live/rtc_…`) fails with 404 after about 6 s. Codex Desktop's voice works
+  on the same account because the Desktop app sets up the call itself and hands Codex an existing
+  call id; that setup isn't exposed, and copying it would be imitating another client (see the
+  Ainotra rule above). So realtime voice means a provider API with a key: OpenAI's Realtime API or
+  Gemini Live.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
