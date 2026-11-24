@@ -229,6 +229,9 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
     realtimeStartInstructions: opts.instructions,
     transport: { type: "existingCall", callId },
   });
+  // the model ignores the instruction fields but takes its identity from a conversation turn, so
+  // brief it as a developer message right after the call comes up (it adopts the persona, quietly)
+  void req("thread/realtime/appendText", { threadId: thread.id, role: "developer", text: opts.instructions });
   log("info", `realtime voice up (${opts.voice})`);
   opts.onStatus("listening");
 
