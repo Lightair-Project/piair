@@ -271,6 +271,15 @@ exactly as it is.
   supported API. Works on every target: `scripts/build.ts` embeds the matching
   `@node-datachannel/<platform>` addon per build (`src/ndc.ts` is swapped in; the host platform's
   package is in node_modules, a cross-target one fetched from npm), and opusscript is WASM.
+- **Persona can't be set on the Codex realtime voice (found 24 November 2026).** The live model
+  (`gpt-live-1.1-codex`) keeps its ChatGPT/assistant identity: with the persona set every way the
+  protocol allows — the call's `session.instructions`, the thread's `baseInstructions` and
+  `developerInstructions`, and `realtimeStartInstructions` — it still answers "I'm ChatGPT… I can
+  help you research, write, code". `initialItems`/`prompt` at start stop it responding at all. This
+  is the model's own identity, not the transport, so it's the same through the CLI's `/voice`. A
+  custom-persona realtime co-host therefore needs a model whose system prompt is ours: the OpenAI
+  Realtime API (an API key) or Gemini Live (the Google key, already connected). The Codex path
+  gives ChatGPT's voice and identity, nothing re-skinnable.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
