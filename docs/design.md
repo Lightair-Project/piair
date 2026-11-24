@@ -219,6 +219,15 @@ exactly as it is.
   call id; that setup isn't exposed, and copying it would be imitating another client (see the
   Ainotra rule above). So realtime voice means a provider API with a key: OpenAI's Realtime API or
   Gemini Live.
+  Checked further the same day, with the Codex CLI's working `/voice` session's own log: the CLI
+  (and Desktop) create the call themselves, POSTing the offer to
+  `chatgpt.com/backend-api/codex/realtime/calls?intent=quicksilver&architecture=avas` with the
+  ChatGPT sign-in token, then start Codex with `transport: {type: "existingCall", callId}`. Driving
+  Codex's own helper (`codex-voice-host`: length-prefixed JSON frames, `hello` protocol 1 with the
+  package's `sourceCommit`, `startTransport` → offer with TCP candidates, `applyAnswer`) through the
+  `webrtc` transport still times out (`transportTimedOut`, then the same 404), with no other voice
+  session running. The working route needs Codex's stored ChatGPT token and its private endpoint:
+  not done.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
