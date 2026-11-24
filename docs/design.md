@@ -313,7 +313,7 @@ The **director** (`src/director.ts`) collects inputs and decides when the co-hos
 | Input | Trusted | Default behaviour |
 |---|---|---|
 | Panel prompt (`prompt`) | yes | Answer at once (interrupts own speech). |
-| Streamer speech (`heard`, final) addressed to PiAir (its name, or a question right after PiAir spoke) | yes | Answer at once. |
+| Speech on a conversation track (`heard`, final): the streamer's mic, a guest's | yes | Answer it, every time: that's the co-host's conversation. Talking over PiAir cuts it off. |
 | Paid messages, raids, new members | no | Thank, within ~5 s. |
 | Chat mentioning PiAir's name, or a question | no | Candidate. |
 | Other chat | no | Candidate with low weight; batched. |

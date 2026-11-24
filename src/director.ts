@@ -78,14 +78,20 @@ export function onChat(ev: any) {
   if (candidates.length > 60) candidates = candidates.sort((a, b) => b.score - a.score).slice(0, 40);
 }
 
-/** Someone in the conversation said something (a track the co-host hears as conversation:
- * the streamer's mic, a guest's). It answers when they say its name, or ask right after it spoke. */
+/** Someone in the conversation said something (a track the co-host hears as conversation: the
+ * streamer's mic, a guest's). That's the co-host's conversation: it answers everything said in it
+ * (talking over it cuts it off, and it answers the new line). */
 export function onHeard(text: string, final: boolean, who?: string) {
   if (!final || !text.trim()) return;
+  // PIAIR_DEBUG=1: what it heard, in the log (checks)
+  if (process.env.PIAIR_DEBUG) log("info", `heard${who ? ` (${who})` : ""}: ${text}`);
   memory.record("streamer", text, who ?? "");
   send({ t: "transcript", role: "streamer", text, ...(who ? { who } : {}) });
-  const addressed = nameRe().test(text) || (Date.now() - lastSpokeEndedAt < 8_000 && /\?\s*$/.test(text));
-  if (addressed) startTrusted("streamer", `${who ? `On ${esc(who)}, someone` : "The streamer"} said to you: ${text}${contentContext()}`);
+  const speaker = who ? `On ${esc(who)}, someone` : "The streamer";
+  startTrusted(
+    "streamer",
+    `${speaker} said to you, out loud (heard through speech recognition, so there's no punctuation and words may be misheard): ${text}${contentContext()}`,
+  );
 }
 
 // What's playing (tracks heard as content): context, never instructions.
@@ -321,6 +327,7 @@ async function turn(source: Source, prompt: string) {
     utt?.end();
     if (said) {
       send({ t: "transcript", role: "piair", text: said });
+      if (process.env.PIAIR_DEBUG) log("info", `said: ${said}`);
       memory.record("piair", said);
       log("info", `turn ${id}: first sentence ${firstPieceMs} ms${utt ? "" : " (no voice)"}`);
     }
