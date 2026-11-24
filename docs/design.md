@@ -226,8 +226,31 @@ exactly as it is.
   Codex's own helper (`codex-voice-host`: length-prefixed JSON frames, `hello` protocol 1 with the
   package's `sourceCommit`, `startTransport` → offer with TCP candidates, `applyAnswer`) through the
   `webrtc` transport still times out (`transportTimedOut`, then the same 404), with no other voice
-  session running. The working route needs Codex's stored ChatGPT token and its private endpoint:
-  not done.
+  session running. The working route needs Codex's stored ChatGPT token and its private endpoint.
+  The owner chose to go on with it (for their own use): **the recipe, proven 24 November 2026 up
+  to a connected call on a ChatGPT Plus sign-in** (codex 0.172; from openai/codex, Apache-2.0:
+  `tui/src/realtime_call.rs`, `codex-api/src/endpoint/realtime_call.rs`,
+  `realtime_websocket/methods_frameless_bidi.rs`, `voice-host/src/transport.rs`):
+  1. `codex app-server`: `initialize` (`capabilities.experimentalApi`), `account/read
+     {refreshToken: true}` (Codex renews its own sign-in), `thread/start` (ephemeral, read-only,
+     scratch folder).
+  2. A WebRTC offer with an Opus track and an `oai-events` data channel, **with TCP candidates**
+     (this network reaches OpenAI's ICE-lite servers only on TCP 443; UDP 3478 never answers).
+  3. `POST https://chatgpt.com/backend-api/codex/realtime/calls?intent=quicksilver&architecture=avas`,
+     JSON `{sdp, session}`, `session = {instructions, audio: {output: {voice}}, delegation: {type:
+     "client"}, model: "gpt-live-1.1-codex"}`; headers `Authorization: Bearer <tokens.access_token
+     from ~/.codex/auth.json>`, `chatgpt-account-id`, `openai-alpha: quicksilver=v2`,
+     `x-session-id`/`thread-id`: the thread id, `session-id`, `voice-session-id` (a new UUID),
+     `originator`. 201: the body is the answer SDP, `Location` ends in the call id (`rtc_…`).
+     Without `openai-alpha` the call is created but never connects (that's why the app-server's
+     own `webrtc` transport fails).
+  4. Apply the answer; when `oai-events` opens, `thread/realtime/start {version: "v3",
+     outputModality: "audio", realtimeSessionId: callId, voiceSessionId, includeStartupContext:
+     false, clientManagedHandoffs: true, transport: {type: "existingCall", callId}}`.
+  5. Audio travels **on the WebRTC call** (Opus both ways): Codex's side rejects
+     `input_audio.append` on a call. `codex-voice-host` only joins the call to the Mac's own mic and
+     speakers, so Lightair needs its own peer (webrtc-rs 0.20 `with_tcp_addrs`, like the voice host)
+     to put the heard tracks in and take the voice out.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
