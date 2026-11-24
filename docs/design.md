@@ -42,6 +42,10 @@ card, Change and Transform come with it:
   the Inspector says how it's going: Listening, the words it last made out, no sound coming in,
   or why it can't hear (the helper's `READY`/`ERROR` lines; a helper that stops is started again
   after five seconds, not in a loop).
+- **Mouth** (`cohost.mouth`): `data` (the default: the voice vendor's mouth shapes timed to the
+  words, ElevenLabs' and Cartesia's; the sound's loudness where the vendor sends none), `audio`
+  (the voice's loudness and brightness alone) or `tracking` (the avatar's own face tracking moves
+  the mouth; the voice never does). `face_drive::set_mouth_source`, set by the co-host sync.
 - **Hearing with** (`cohost.hearing.conversation` and `.content`: `{engine, model, language}`):
   what turns each kind of track into words, chosen separately.
   - `apple` (the default): Apple's on-device recognizer through `lightair-speech`; free, private,
