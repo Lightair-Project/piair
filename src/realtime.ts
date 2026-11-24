@@ -37,6 +37,9 @@ export interface RealtimeOptions {
   onTranscript(role: "streamer" | "piair", text: string): void;
   onStatus(state: string, detail?: string): void;
   onError(message: string): void;
+  /** The model started (true) or finished (false) speaking, from its own transcript stream. The
+   * voice audio is forwarded only while this is true, so each reply is one unbroken utterance. */
+  onSpeaking(active: boolean): void;
 }
 
 export interface Realtime {
@@ -89,12 +92,25 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
   const note = (method: string, params?: any) => app.stdin!.write(JSON.stringify({ method, ...(params !== undefined ? { params } : {}) }) + "\n");
 
   const dec = new OpusScript(48000, 2, OpusScript.Application.AUDIO);
+  let speakingTail: ReturnType<typeof setTimeout> | null = null;
   function onNote(m: any) {
     const meth = m.method as string | undefined;
-    if (meth === "thread/realtime/transcript/done") {
+    // the model's transcript streams while it talks: open the voice on the first word and close it a
+    // short tail after the last, so the whole reply plays as one utterance (no loudness guessing).
+    if (meth === "thread/realtime/transcript/delta" && m.params?.role === "assistant") {
+      if (speakingTail) {
+        clearTimeout(speakingTail);
+        speakingTail = null;
+      }
+      opts.onSpeaking(true);
+    } else if (meth === "thread/realtime/transcript/done") {
       const role = m.params?.role === "assistant" ? "piair" : "streamer";
       const text = String(m.params?.text ?? "").trim();
       if (text) opts.onTranscript(role, text);
+      if (role === "piair") {
+        if (speakingTail) clearTimeout(speakingTail);
+        speakingTail = setTimeout(() => opts.onSpeaking(false), 500);
+      }
     } else if (meth === "thread/realtime/error") {
       opts.onError(String(m.params?.message ?? "the voice call failed"));
     } else if (meth === "thread/realtime/closed") {

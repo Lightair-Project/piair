@@ -9,11 +9,11 @@ import * as settings from "./settings.ts";
 
 let session: Realtime | null = null;
 let starting = false;
-/** The utterance the model's voice is streaming into now (a new one after a pause). */
+/** The utterance the model's voice is streaming into now (one per reply). */
 let utterance: string | null = null;
 let seq = 0;
-let lastVoiceAt = 0;
-let endTimer: ReturnType<typeof setTimeout> | null = null;
+/** The model is speaking (from its transcript stream): the call's audio is forwarded only then. */
+let speaking = false;
 
 export function isOn(): boolean {
   return settings.get().voice.vendor === "codex";
@@ -37,32 +37,28 @@ function instructions(): string {
     .join("\n");
 }
 
-/** Ends the current voice utterance after a short silence, so the mouth rests between lines. */
-function scheduleEnd() {
-  if (endTimer) clearTimeout(endTimer);
-  endTimer = setTimeout(() => {
-    if (utterance) {
-      send({ t: "voice_end", utterance });
-      utterance = null;
-    }
-  }, 400);
-}
-
-/** The model's voice (48 kHz mono) → a `voice` message Lightair plays (no marks: mouth follows sound).
- * The call carries continuous audio, so quiet frames (comfort noise between lines) are dropped: the
- * utterance ends and the mouth rests until the model speaks again. */
-function onVoice(pcm: Int16Array) {
-  let sum = 0;
-  for (let i = 0; i < pcm.length; i++) sum += pcm[i]! * pcm[i]!;
-  const rms = Math.sqrt(sum / pcm.length);
-  if (rms < 160) return; // about -46 dBFS: silence or comfort noise
-  if (!utterance) {
+/** The model started/stopped speaking (its transcript stream): start the voice utterance on the
+ * first word, end it after the last. Between replies nothing is forwarded, so the mouth rests. */
+function onSpeaking(active: boolean) {
+  if (active === speaking) return;
+  speaking = active;
+  if (active) {
     utterance = `rt-${Date.now()}`;
     seq = 0;
+    send({ t: "status", state: "speaking" });
+  } else if (utterance) {
+    send({ t: "voice_end", utterance });
+    utterance = null;
+    send({ t: "status", state: "listening" });
   }
-  lastVoiceAt = Date.now();
+}
+
+/** The model's voice (48 kHz mono) → a `voice` message Lightair plays (no marks: the mouth follows
+ * the sound). Forwarded only while the model is speaking, as one continuous utterance — so there are
+ * no clicks within a reply and silence between replies isn't sent. */
+function onVoice(pcm: Int16Array) {
+  if (!speaking || !utterance) return;
   send({ t: "voice", utterance, seq: seq++, rate: 48000, pcm: Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength).toString("base64") });
-  scheduleEnd();
 }
 
 /** Brings realtime voice into step with the settings: on when the vendor is "codex", off otherwise. */
@@ -79,6 +75,7 @@ export async function apply(): Promise<void> {
         codexBin,
         cwd: settings.piairDir(),
         onVoice,
+        onSpeaking,
         onTranscript: (role, text) => send({ t: "transcript", role, text }),
         onStatus: (state, detail) => send({ t: "status", state, ...(detail ? { detail } : {}) }),
         onError: (message) => send({ t: "status", state: "error", detail: message }),
@@ -99,19 +96,23 @@ export function pushAudio(pcm: Int16Array) {
   session?.pushAudio(pcm);
 }
 
-/** The streamer started talking: interrupt the model (barge-in). */
+/** The streamer started talking: interrupt the model and cut what it's saying now (barge-in). */
 export function interrupt() {
   session?.interrupt();
+  if (utterance) {
+    send({ t: "voice_cancel", utterance });
+    utterance = null;
+    speaking = false;
+  }
 }
 
 export async function stop(): Promise<void> {
   const s = session;
   session = null;
-  if (endTimer) clearTimeout(endTimer);
   if (utterance) {
     send({ t: "voice_end", utterance });
     utterance = null;
   }
-  void lastVoiceAt;
+  speaking = false;
   await s?.stop();
 }

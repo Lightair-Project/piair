@@ -263,7 +263,9 @@ exactly as it is.
   On when the co-host's voice is "ChatGPT voice"; Lightair streams the heard conversation audio as
   `audio` messages (16 kHz mono s16le, base64), PiAir upsamples to 48 kHz stereo Opus up the call,
   and the model's voice comes back as the usual `voice` messages (48 kHz mono; no marks, so the
-  mouth follows the sound; quiet frames dropped so it rests between lines). Barge-in: a `streamer
+  mouth follows the sound; one reply is one utterance, framed by the model's own transcript stream
+  — onSpeaking opens the voice on the first word and ends it a short tail after the last, so there
+  are no clicks within a reply and silence between replies isn't sent). Barge-in: a `streamer
   speaking` message clears the outgoing buffer. It uses the streamer's own Codex ChatGPT sign-in
   (`~/.codex/auth.json`) the Codex CLI's way, off by default, for their own machine; there is no
   supported API. Works on every target: `scripts/build.ts` embeds the matching
