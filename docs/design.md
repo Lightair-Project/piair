@@ -165,8 +165,15 @@ exactly as it is.
   `secret.*` calls, and ends it after its `providers` message; so signing in works with no co-host
   on, and the co-host's PiAir is told `secrets_changed`. Signing out deletes the OAuth credential
   in Lightair (an API key for the same provider stays). Rows: Claude Pro/Max (`anthropic`),
-  ChatGPT Plus/Pro (`openai-codex`), GitHub Copilot, SuperGrok/X Premium (`xai`). Anthropic and
+  ChatGPT (`openai-codex`), GitHub Copilot, SuperGrok/X Premium (`xai`). Anthropic and
   xAI keep one credential per provider: a sign-in replaces a pasted key, and the other way round.
+  ChatGPT is Pi's `openai-codex` provider (shown as "ChatGPT"), not
+  `openai` (the API with a key): when the co-host's provider isn't signed in but a subscription
+  is, its Brain section offers to switch to it, the same company's first.
+- **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
+  `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
+  Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
+  their terminal questions for a desktop (browser login, github.com).
 - **Identity:** `identity: { attribution: { name: "Lightair PiAir", url: "https://lightair.app" } }`.
 - **Two agents:**
   - **The co-host** (talking): a rolling conversation, short replies, no thinking (`reasoning:

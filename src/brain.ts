@@ -33,6 +33,10 @@ for (const p of [anthropicProvider(), openaiProvider(), googleProvider(), openro
   models.setProvider(p);
 }
 
+/** Names people know a provider by, where Pi's are a developer's ("OpenAI Codex" is signing in
+ * with ChatGPT). */
+const NAMES: Record<string, string> = { "openai-codex": "ChatGPT" };
+
 /** Providers for the panel: id, name, how they sign in, models. */
 export async function providerList() {
   const out = [];
@@ -44,7 +48,7 @@ export async function providerList() {
     try {
       signedIn = !!(await models.checkAuth(p.id));
     } catch {}
-    out.push({ id: p.id, name: (p as any).name ?? p.id, auth, signedIn, models: models.getModels(p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
+    out.push({ id: p.id, name: NAMES[p.id] ?? (p as any).name ?? p.id, auth, signedIn, models: models.getModels(p.id).map((m) => ({ id: m.id, name: m.name, images: m.input.includes("image") })) });
   }
   return out;
 }

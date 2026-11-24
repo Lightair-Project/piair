@@ -12,6 +12,10 @@ no GPL, LGPL or AGPL code. Checked 23 November 2026 over `node_modules` (`bun in
 | 0BSD | 1 (`tslib`) |
 | Unlicense | 1 (`fast-sha256`) |
 
+`src/oauth-page.ts` (the page a subscription's sign-in comes back to) carries the Lightair logo,
+the Lightair project's own mark: it's there so the page looks like Lightair, and the MIT licence
+doesn't grant use of the mark elsewhere.
+
 Lightair (GPL-3.0) and PiAir are separate programs that talk over a pipe; the desktop's PiAir
 module speaks the documented protocol (design.md §2).
 
