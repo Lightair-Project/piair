@@ -249,8 +249,15 @@ exactly as it is.
      false, clientManagedHandoffs: true, transport: {type: "existingCall", callId}}`.
   5. Audio travels **on the WebRTC call** (Opus both ways): Codex's side rejects
      `input_audio.append` on a call. `codex-voice-host` only joins the call to the Mac's own mic and
-     speakers, so Lightair needs its own peer (webrtc-rs 0.20 `with_tcp_addrs`, like the voice host)
-     to put the heard tracks in and take the voice out.
+     speakers, so Lightair needs its own peer to put the heard tracks in and take the voice out.
+     **Proven end to end 24 November 2026** on a ChatGPT Plus sign-in, in a compiled Bun binary:
+     PiAir's own WebRTC peer (`node-datachannel` 0.33 with `enableIceTcp`, `opusscript` for Opus)
+     makes the offer with TCP candidates, the call is created, the session started on it; a test
+     voice in was transcribed right and Codex answered in voice (21.6 s of Opus over the call). So
+     PiAir holds the call; `codex-voice-host` isn't needed. Audio each way is 48 kHz stereo Opus in
+     RTP (payload type 111): heard PCM up, Codex's voice down, decoded and sent to Lightair as the
+     usual `voice` messages (the mouth follows the sound). `node-datachannel`'s `.node` addon loads
+     only in the compiled binary, not under `bun run`.
 - **The page the sign-in comes back to** (Pi's local callback server) is Lightair's, not Pi's:
   `scripts/build.ts` builds `src/oauth-page.ts` in place of pi-ai's `utils/oauth-page.js`.
   Pi's flows are built into the binary (`@earendil-works/pi-ai/bun-oauth`), and PiAir answers
