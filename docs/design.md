@@ -37,10 +37,27 @@ card, Change and Transform come with it:
   (something playing, a video or a game: followed as untrusted context, reacted to now and then,
   never taken as someone addressing it). Lightair taps each track's sound
   (`lightair_engine::audio_tap`, 16 kHz mono) into its own on-device speech helper
-  (`lightair-speech - -pcm`). Not set: the first mic, as conversation. Under each heard track
+  (`lightair-speech - -pcm`), or into `piair hear` for a cloud engine (below). Not set: the first
+  mic, as conversation. Under each heard track
   the Inspector says how it's going: Listening, the words it last made out, no sound coming in,
   or why it can't hear (the helper's `READY`/`ERROR` lines; a helper that stops is started again
   after five seconds, not in a loop).
+- **Hearing with** (`cohost.hearing.conversation` and `.content`: `{engine, model, language}`):
+  what turns each kind of track into words, chosen separately.
+  - `apple` (the default): Apple's on-device recognizer through `lightair-speech`; free, private,
+    one language (`language` given a region, or the system's). It ends an utterance once its words
+    stop changing for 1.2 s, since Apple rarely ends one in a stream that never stops.
+  - `elevenlabs`: Scribe Live over ElevenLabs' realtime WebSocket (`model` `scribe_v3_live`, the
+    default, with `multilang_mode` so a switch between languages mid-sentence is followed, or
+    `scribe_v2_realtime`); its own voice detection ends utterances; the language it heard comes
+    back. The ElevenLabs key needs Speech to Text.
+  - `openrouter`: any OpenRouter transcription model (listed live from its Models API,
+    `output_modalities=transcription`, newest first, expired ones left out). OpenRouter's
+    speech-to-text doesn't stream, so `piair hear` cuts utterances out by level (60 ms above the
+    noise floor to start, 700 ms below to end, 300 ms kept before) and sends each as a WAV.
+  - `piair hear` reads one JSON line (`{engine, model, language, key}`: the key never on a command
+    line), then 16 kHz mono samples, and writes the helper's lines: `READY`, `TEXT`, `DONE`,
+    `LANG`, `ERROR`. Cloud hearing is billed for every second a track is heard.
 - **Keys** live in Settings → Connections (one row per service: paste, checked, saved or what's
   wrong). The Voice section lists the vendor's voices; picking one plays a sample on this
   computer, never on stream.
