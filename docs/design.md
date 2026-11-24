@@ -113,7 +113,7 @@ silent, the avatar returns to its camera (or rest), and the input executor stops
 | `status` | `state: idle\|listening\|thinking\|speaking\|acting\|error`, `detail?` | For the panel. |
 | `transcript` | `role: viewer\|streamer\|piair\|tool`, `text`, `who?` | The panel's running log. |
 | `secret.get` / `secret.set` | `name`, `value?` (as `call`s) | Keychain access for API keys and OAuth tokens. |
-| `auth` | `provider`, `url?`, `code?`, `message` | An OAuth sign-in step: Lightair opens the URL / shows the code. |
+| `auth` | `provider`, `url?`, `code?`, `message`, `prompt?`, `options?` (`[{id, label}]`), `done?`, `error?` | An OAuth sign-in step: Lightair opens the URL / shows the code; `prompt` wants a code pasted back (or, with `options`, one chosen) as `auth_code`. |
 
 ### 2.3 PiAir's Lightair methods (new, answered only for PiAir)
 
@@ -159,6 +159,14 @@ exactly as it is.
   Claude Pro/Max, Sign in with ChatGPT, GitHub Copilot, OpenRouter. PiAir's `CredentialStore`
   keeps credentials in Lightair's Keychain through `secret.get/set`; Pi refreshes tokens under its
   lock. Sign-in steps arrive as `auth` messages: Lightair opens the URL in the browser.
+- **Where you sign in:** Settings → Connections → Subscriptions, next to the keys, never the
+  co-host's Inspector (it only says whether its provider is signed in, with a link there). Lightair
+  starts a PiAir of its own for the sign-in, sends it only `login` and `auth_code`, answers only its
+  `secret.*` calls, and ends it after its `providers` message; so signing in works with no co-host
+  on, and the co-host's PiAir is told `secrets_changed`. Signing out deletes the OAuth credential
+  in Lightair (an API key for the same provider stays). Rows: Claude Pro/Max (`anthropic`),
+  ChatGPT Plus/Pro (`openai-codex`), GitHub Copilot, SuperGrok/X Premium (`xai`). Anthropic and
+  xAI keep one credential per provider: a sign-in replaces a pasted key, and the other way round.
 - **Identity:** `identity: { attribution: { name: "Lightair PiAir", url: "https://lightair.app" } }`.
 - **Two agents:**
   - **The co-host** (talking): a rolling conversation, short replies, no thinking (`reasoning:

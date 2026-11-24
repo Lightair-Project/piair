@@ -291,7 +291,9 @@ export async function login(provider: string, kind: "oauth" | "api_key", key?: s
   }
   await models.login(provider, "oauth", {
     prompt: async (p: any) => {
-      send({ t: "auth", provider, message: p.message ?? "Paste the code from the sign-in page", prompt: true });
+      // a choice (which account kind) comes with its options; anything else wants a code pasted
+      const options = p.type === "select" ? (p.options ?? []).map((o: any) => ({ id: o.id, label: o.label })) : undefined;
+      send({ t: "auth", provider, message: p.message ?? "Paste the code from the sign-in page", prompt: true, ...(options ? { options } : {}) });
       return await new Promise<string>((resolve) => (pendingCode = resolve));
     },
     notify: (ev: any) => {
