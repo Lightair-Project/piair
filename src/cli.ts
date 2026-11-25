@@ -1,8 +1,7 @@
 // The streamer's own AI command-line apps as the co-host's brain: their plans the supported way.
 // Each turn runs the app once, in its print mode, in an empty scratch folder, with a scrubbed
-// environment and none of its tools (it only answers in text; PiAir speaks it). Ported from
-// Ainotra's bridge (ainotra-desktop packages/providers/src/adapters/cli.ts, the same owner's code),
-// which was checked against live runs of each app.
+// environment and none of its tools (it only answers in text; PiAir speaks it). Checked against
+// live runs of each app.
 //
 //   codex   ChatGPT plan        codex exec --json                       ~15k tokens of setup a call
 //   claude  Claude plan         claude -p --output-format stream-json    ~750 (our system prompt, no tools)

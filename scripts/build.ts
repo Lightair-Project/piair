@@ -1,4 +1,4 @@
-// One compiled binary per platform (like Pi's scripts/build-binaries.sh): dist/<target>/piair.
+// One compiled binary per platform: dist/<target>/piair.
 // bun scripts/build.ts [target…]   targets: darwin-arm64 darwin-x64 windows-x64 (default: all)
 import { $ } from "bun";
 
