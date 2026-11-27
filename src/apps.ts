@@ -39,6 +39,9 @@ export interface SpawnOptions {
 }
 
 const bridgedChildren = new Map<number, Bridged>();
+/** Output that arrived before its app's id did (Lightair's reply and the app's first output can
+ * come in one read, and the reply resolves a tick later). */
+const early = new Map<number, { t: string; [k: string]: any }[]>();
 
 class Bridged extends EventEmitter implements AppChild {
   stdin = new PassThrough();
@@ -59,6 +62,11 @@ class Bridged extends EventEmitter implements AppChild {
   started(id: number) {
     this.id = id;
     bridgedChildren.set(id, this);
+    for (const m of early.get(id)?.splice(0) ?? []) {
+      if (m.t === "cli_out") this.out(m.stream, m.data);
+      else this.exited(m.code);
+    }
+    early.delete(id);
     for (const q of this.queued.splice(0)) void call("cli.stdin", { id, data: q.data, end: q.end }).catch(() => {});
   }
 
@@ -89,8 +97,21 @@ class Bridged extends EventEmitter implements AppChild {
   }
 }
 
-on("cli_out", (m) => bridgedChildren.get(m.id)?.out(m.stream, m.data));
-on("cli_exit", (m) => bridgedChildren.get(m.id)?.exited(m.code));
+function keepEarly(m: { t: string; id: number; [k: string]: any }) {
+  const list = early.get(m.id) ?? [];
+  if (list.length < 1000) list.push(m);
+  early.set(m.id, list);
+}
+on("cli_out", (m) => {
+  const c = bridgedChildren.get(m.id);
+  if (c) c.out(m.stream, m.data);
+  else keepEarly(m as any);
+});
+on("cli_exit", (m) => {
+  const c = bridgedChildren.get(m.id);
+  if (c) c.exited(m.code);
+  else keepEarly(m as any);
+});
 
 /** Starts one of the four apps. `bin` is what `which` returned. */
 export function spawnApp(bin: string, args: string[], opts: SpawnOptions): AppChild {
