@@ -7,7 +7,7 @@
 //   claude  Claude plan         claude -p --output-format stream-json    ~750 (our system prompt, no tools)
 //   agy     Google AI plan      agy -p … --output-format stream-json     ~12k (it's an agent)
 //   grok    SuperGrok / X plan  grok -p … --output-format streaming-messages-json   ~7k
-import { spawn } from "node:child_process";
+import { SCRATCH, bridged, catalogText, spawnApp, which } from "./apps.ts";
 import { constants } from "node:fs";
 import { access, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
@@ -175,16 +175,19 @@ async function newestFile(dir: string, suffix: string): Promise<string | null> {
 }
 
 async function claudeCatalog(): Promise<CliModel[] | null> {
-  const file = await newestFile(join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "cache", "model-catalog"), "-cc.json");
-  if (!file) return null;
-  const models = JSON.parse(await readFile(file, "utf8"))?.catalog?.config?.models;
+  const text = await catalogText("claude", async () => {
+    const file = await newestFile(join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "cache", "model-catalog"), "-cc.json");
+    if (!file) throw new Error("no catalog");
+    return readFile(file, "utf8");
+  });
+  const models = JSON.parse(text)?.catalog?.config?.models;
   if (!Array.isArray(models)) return null;
   const out = models.filter((m: any) => m?.id && !m.hidden).map((m: any) => ({ id: m.id, name: m.name || m.id }));
   return out.length ? out : null;
 }
 
 async function codexCatalog(): Promise<CliModel[] | null> {
-  const d = JSON.parse(await readFile(join(process.env.CODEX_HOME || join(homedir(), ".codex"), "models_cache.json"), "utf8"));
+  const d = JSON.parse(await catalogText("codex", () => readFile(join(process.env.CODEX_HOME || join(homedir(), ".codex"), "models_cache.json"), "utf8")));
   const models = d?.models;
   if (!Array.isArray(models)) return null;
   const out = models.filter((m: any) => m?.slug && (!m.visibility || m.visibility === "list")).map((m: any) => ({ id: m.slug, name: m.display_name || m.slug }));
@@ -192,7 +195,7 @@ async function codexCatalog(): Promise<CliModel[] | null> {
 }
 
 async function grokCatalog(): Promise<CliModel[] | null> {
-  const d = JSON.parse(await readFile(join(process.env.GROK_HOME || join(homedir(), ".grok"), "models_cache.json"), "utf8"));
+  const d = JSON.parse(await catalogText("grok", () => readFile(join(process.env.GROK_HOME || join(homedir(), ".grok"), "models_cache.json"), "utf8")));
   const raw = d?.models;
   const list = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw) : [];
   const out = (list as any[]).map((x) => x?.info ?? x).filter((m: any) => m?.id && !m.hidden).map((m: any) => ({ id: m.id, name: m.name || m.id }));
@@ -307,6 +310,10 @@ function searchDirs(): string[] {
 }
 
 export async function findBinary(name: string): Promise<string | null> {
+  return which(name, () => findLocal(name));
+}
+
+async function findLocal(name: string): Promise<string | null> {
   const names = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   for (const dir of [...(process.env.PATH ?? "").split(delimiter), ...searchDirs()].filter(Boolean)) {
     for (const n of names) {
@@ -322,7 +329,8 @@ export async function findBinary(name: string): Promise<string | null> {
 
 function runShort(bin: string, args: string[], configEnv: string[], timeoutMs = 5_000): Promise<{ code: number | null; stdout: string }> {
   return new Promise((resolve) => {
-    const child = spawn(bin, args, { env: scrubbedEnv(configEnv), stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
+    const child = spawnApp(bin, args, { configEnv, env: scrubbedEnv(configEnv), timeoutMs });
+    child.stdin.end();
     let stdout = "";
     child.stdout.on("data", (d) => (stdout += d));
     child.stderr.on("data", () => {});
@@ -379,9 +387,10 @@ export async function* generate(name: CliName, model: string, system: string, pr
   const spec = SPECS[name];
   const bin = bins.get(name) ?? (await findBinary(spec.bin));
   if (!bin) throw new Error(`${spec.label} isn't installed on this computer`);
-  const dir = await mkdtemp(join(tmpdir(), "piair-cli-"));
+  // bridged, Lightair makes the scratch folder (outside PiAir's sandbox) and puts its path in
+  const dir = bridged ? SCRATCH : await mkdtemp(join(tmpdir(), "piair-cli-"));
   const fullPrompt = spec.systemFlag ? prompt : `${system}\n\n${prompt}`;
-  const child = spawn(bin, spec.args(model, system, fullPrompt, dir), { cwd: dir, env: scrubbedEnv(spec.configEnv), stdio: ["pipe", "pipe", "pipe"] });
+  const child = spawnApp(bin, spec.args(model, system, fullPrompt, dir), { configEnv: spec.configEnv, scratch: bridged, cwd: bridged ? undefined : dir, env: scrubbedEnv(spec.configEnv) });
   let stderr = "";
   child.stderr!.on("data", (d) => (stderr = (stderr + d).slice(-4_000)));
   const exited = new Promise<number | null>((resolve) => {
@@ -413,6 +422,6 @@ export async function* generate(name: CliName, model: string, system: string, pr
   } finally {
     signal.removeEventListener("abort", kill);
     kill();
-    await rm(dir, { recursive: true, force: true }).catch(() => {});
+    if (!bridged) await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }

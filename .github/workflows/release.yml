@@ -1,0 +1,64 @@
+# PiAir's releases as a Lightair package (app.lightair.piair).
+#
+# On a tag (v0.2.0): builds the three binaries and packs them with lightair-pack, unsigned, into a
+# draft release, for checking. Signing stays on the owner's Mac (`bun run package --sign …`, which
+# also notarizes): the owner replaces the macOS .airpkg files on the draft with signed ones and
+# publishes the release (immutable releases on). Then "Register with Lightair's catalog" (run by
+# hand) registers it by trusted publishing: the catalog checks this workflow's OIDC token, so no
+# long-lived token exists.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      register:
+        description: "Tag of a published release to register with Lightair's catalog"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event_name == 'push'
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      # the lightair-core commit whose lightair-pack packs (a repository variable)
+      LIGHTAIR_CORE_REV: ${{ vars.LIGHTAIR_CORE_REV }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: lightair-pack
+        run: |
+          git clone --filter=blob:none https://github.com/Lightair-Project/lightair-core ../lightair-core
+          git -C ../lightair-core checkout "${LIGHTAIR_CORE_REV:-main}"
+          cargo build --release -p lightair-pack --manifest-path ../lightair-core/Cargo.toml
+      - name: Package (unsigned)
+        run: bun run package
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/airpkg/*.airpkg dist/package/lightair-package.json --draft --title "PiAir $TAG" --notes "Unsigned build for checking. The macOS files are replaced with signed, notarized ones before publishing."
+
+  register:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Register by trusted publishing
+        env:
+          TAG: ${{ inputs.register }}
+          REPO: ${{ github.repository }}
+        run: |
+          token=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://packages.lightair.app" | jq -r .value)
+          jq -n --arg repository "$REPO" --arg tag "$TAG" '{repository: $repository, tag: $tag}' > body.json
+          curl -fsS -X POST https://packages.lightair.app/v1/versions \
+            -H "Authorization: Bearer $token" -H "content-type: application/json" --data @body.json

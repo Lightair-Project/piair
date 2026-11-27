@@ -12,7 +12,7 @@
 // node-datachannel's native addon is embedded per platform by scripts/build.ts (src/ndc.ts), so
 // realtime voice works on every target PiAir ships to; it loads only from the compiled binary.
 import rtc from "./ndc.ts";
-import { spawn } from "node:child_process";
+import { spawnApp } from "./apps.ts";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -66,7 +66,7 @@ export async function startRealtime(opts: RealtimeOptions): Promise<Realtime> {
   if (!rtc) throw new Error("Realtime voice runs only in the built app, not a development run.");
   const OpusScript = (await import("opusscript")).default;
 
-  const app = spawn(opts.codexBin, ["app-server"], { stdio: ["pipe", "pipe", "ignore"] });
+  const app = spawnApp(opts.codexBin, ["app-server"], { configEnv: ["CODEX_HOME"] });
   let nextId = 0;
   const waiting = new Map<number, (m: any) => void>();
   let buf = "";
