@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 // "codex" is realtime voice: ChatGPT's live model hears and speaks over a call (src/realtime.ts),
 // not a text-to-speech vendor.
-export type VoiceVendor = "cartesia" | "elevenlabs" | "gemini" | "codex" | "none";
+export type VoiceVendor = "cartesia" | "elevenlabs" | "gemini" | "system" | "codex" | "none";
 
 export interface Settings {
   provider: string;
@@ -31,9 +31,10 @@ export const DEFAULTS: Settings = {
 
 /** Default voice per vendor (each vendor's own stock voice ids). */
 export const DEFAULT_VOICES: Record<VoiceVendor, string> = {
-  cartesia: "", // the first stock voice the account lists (voice/cartesia.ts)
+  cartesia: "", // the first stock voice the account lists (Lightair picks it)
   elevenlabs: "", // chosen in the co-host's Voice section (the account's voices)
   gemini: "Puck",
+  system: "", // the computer's default voice
   codex: "cove", // an OpenAI realtime voice
   none: "",
 };

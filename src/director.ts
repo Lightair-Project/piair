@@ -7,7 +7,7 @@ import * as settings from "./settings.ts";
 import { moderate, speakable, Splitter } from "./speech.ts";
 import { turnViewers } from "./tools/talk.ts";
 import type { Source } from "./tools/types.ts";
-import type { Voice } from "./voice/index.ts";
+import { onVoiceState as voicePlayed, type Voice } from "./voice.ts";
 
 type Candidate = { score: number; at: number; line: string; text: string; who: string; platform: string; viewer: string; urgent: boolean };
 
@@ -31,9 +31,7 @@ const recentTexts: string[] = [];
 let queuedTrusted: { source: Source; prompt: string } | null = null;
 
 export function setVoice(v: Voice | null) {
-  voice?.close();
   voice = v;
-  void voice?.warm();
 }
 
 const esc = (s: string) => s.replace(/</g, "‹").replace(/>/g, "›").slice(0, 400);
@@ -130,6 +128,7 @@ export function onStreamer(isSpeaking: boolean) {
 }
 
 export function onVoiceState(utterance: string, state: string) {
+  voicePlayed(utterance, state);
   if (state === "playing") speaking.add(utterance);
   else {
     if (speaking.delete(utterance) && speaking.size === 0) lastSpokeEndedAt = Date.now();
@@ -144,7 +143,7 @@ export function stop() {
   current?.abort();
   brain.stopTask();
   currentUtterance?.cancel();
-  send({ t: "voice_cancel" });
+  send({ t: "say_cancel" });
   speaking.clear();
   status();
 }
@@ -155,7 +154,7 @@ function startTrusted(source: Source, prompt: string) {
     queuedTrusted = { source, prompt };
     current?.abort();
     currentUtterance?.cancel();
-    send({ t: "voice_cancel" });
+    send({ t: "say_cancel" });
     speaking.clear();
     return;
   }
@@ -174,7 +173,7 @@ setInterval(() => {
   // the streamer talks over PiAir: stop after a moment (not for a cough)
   if (streamerSpeaking && speaking.size && settings.get().behaviour.stopWhenStreamerTalks && now - streamerTalkingSince > 600) {
     currentUtterance?.cancel();
-    send({ t: "voice_cancel" });
+    send({ t: "say_cancel" });
     speaking.clear();
   }
   if (busy || speaking.size) return;

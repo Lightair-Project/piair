@@ -27,22 +27,6 @@ export async function setSecret(name: string, value: string | null) {
   await call("secret.set", { name, value }, 10_000);
 }
 
-/** Environment overrides for development (never written anywhere). */
-const ENV_KEYS: Record<string, string> = {
-  cartesia: "CARTESIA_API_KEY",
-  elevenlabs: "ELEVENLABS_API_KEY",
-  gemini: "GEMINI_API_KEY",
-};
-
-export async function voiceKey(vendor: string): Promise<string | undefined> {
-  return (await getSecret(`voice:${vendor}`)) ?? (ENV_KEYS[vendor] ? process.env[ENV_KEYS[vendor]] : undefined) ?? (vendor === "gemini" ? await providerApiKey("google") : undefined);
-}
-
-async function providerApiKey(provider: string): Promise<string | undefined> {
-  const c = await store.read(provider);
-  return c?.type === "api_key" ? c.key : undefined;
-}
-
 const locks = new Map<string, Promise<unknown>>();
 const known = new Set<string>();
 

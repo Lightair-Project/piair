@@ -3,12 +3,12 @@ import * as brain from "./brain.ts";
 import * as director from "./director.ts";
 import * as memory from "./memory.ts";
 import { log, on, run, send } from "./protocol.ts";
-import { forget, voiceKey, warm } from "./secrets.ts";
+import { forget, warm } from "./secrets.ts";
 import * as settings from "./settings.ts";
-import { makeVoice } from "./voice/index.ts";
+import { LightairVoice } from "./voice.ts";
 import * as realtime from "./realtime-mode.ts";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.2.0";
 
 async function applyVoice() {
   const s = settings.get();
@@ -19,16 +19,8 @@ async function applyVoice() {
     return;
   }
   if (realtime.running()) await realtime.stop();
-  try {
-    const key = await voiceKey(s.voice.vendor);
-    const v = await makeVoice(s.voice.vendor, key, s.voice.voice, s.voice.speed, s.persona.language);
-    director.setVoice(v);
-    const names: Record<string, string> = { cartesia: "Cartesia", elevenlabs: "ElevenLabs", gemini: "Gemini" };
-    if (!v && s.voice.vendor !== "none") send({ t: "status", state: "error", detail: `No ${names[s.voice.vendor] ?? s.voice.vendor} key: add one in Settings → Connections` });
-  } catch (e) {
-    log("warn", "voice:", e);
-    director.setVoice(null);
-  }
+  // Lightair speaks the text it's sent (its built-in voices; keys stay in Lightair)
+  director.setVoice(s.voice.vendor === "none" ? null : new LightairVoice());
 }
 
 on("hello", async (m) => {
