@@ -1,0 +1,28 @@
+diff --git a/dist/auth/oauth/openai-chatgpt.js b/dist/auth/oauth/openai-chatgpt.js
+index a351c28f6972d3ede55ca09f812778a787ce6f16..5a513320289b6ba52c439cb6930ec9a18b9d92da 100644
+--- a/dist/auth/oauth/openai-chatgpt.js
++++ b/dist/auth/oauth/openai-chatgpt.js
+@@ -100,7 +100,8 @@ function startCallbackServer(expectedState) {
+             }
+         });
+         server.once("error", reject);
+-        server.listen(CALLBACK_PORT, CALLBACK_HOST, () => {
++        // Lightair may give the port to listen on; the browser still comes back to CALLBACK_PORT
++        server.listen(Number(process.env.LIGHTAIR_LISTEN_1455 || CALLBACK_PORT), CALLBACK_HOST, () => {
+             server.removeListener("error", reject);
+             server.on("error", rejectResult);
+             resolve({ server, result });
+diff --git a/dist/auth/oauth/openai-codex.js b/dist/auth/oauth/openai-codex.js
+index b543b9381352951833aeeaa1fc27ebdddda570bf..2c9a577a47780477f4768827d78184b2f028ffed 100644
+--- a/dist/auth/oauth/openai-codex.js
++++ b/dist/auth/oauth/openai-codex.js
+@@ -278,7 +278,8 @@ async function loginOpenAICodex(interaction, options) {
+     const callback = await startOAuthCallbackServer({
+         providerName: "OpenAI",
+         host: getCallbackHost(),
+-        port: 1455,
++        // Lightair may give the port to listen on; the browser still comes back to 1455
++        port: Number(process.env.LIGHTAIR_LISTEN_1455 || 1455),
+         path: "/auth/callback",
+         state,
+         complete: async (code) => code,

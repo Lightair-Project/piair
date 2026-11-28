@@ -18,5 +18,8 @@
     "sync-tools": "bun scripts/sync-mcp-tools.ts",
     "build": "bun scripts/build.ts",
     "package": "bun scripts/package.ts"
+  },
+  "patchedDependencies": {
+    "@earendil-works/pi-ai@1.6.0": "patches/@earendil-works%2Fpi-ai@1.6.0.patch"
   }
 }
