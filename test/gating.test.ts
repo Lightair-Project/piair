@@ -95,7 +95,7 @@ test("only the streamer's turns can take a screenshot of the program", async () 
 
 /** A computer task in which the model asks for `tool` first. Resolves with the Lightair methods
  * the task called (stopped as soon as one goes out, since nothing answers here). */
-async function taskAsking(tool: string, args: Record<string, unknown>) {
+async function taskAsking(tool: string, args: Parameters<typeof fauxToolCall>[1]) {
   faux.appendResponses([fauxAssistantMessage([fauxToolCall(tool, args)]), fauxAssistantMessage([fauxText("Done.")])]);
   const ac = new AbortController();
   let ended = false;
