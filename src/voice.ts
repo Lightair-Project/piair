@@ -1,6 +1,5 @@
 // PiAir's voice is Lightair's: each piece of text goes to Lightair (`say`), which speaks it with
-// the co-host's voice on its mixer track, lip sync included (Lightair's built-in voices). Only the
-// realtime mode (realtime-mode.ts) sends audio itself.
+// the co-host's voice on its mixer track, lip sync included (Lightair's built-in voices).
 import { send } from "./protocol.ts";
 
 export interface Utterance {

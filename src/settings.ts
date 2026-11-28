@@ -2,9 +2,7 @@
 import { mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
 
-// "codex" is realtime voice: ChatGPT's live model hears and speaks over a call (src/realtime.ts),
-// not a text-to-speech vendor.
-export type VoiceVendor = "cartesia" | "elevenlabs" | "gemini" | "system" | "codex" | "none";
+export type VoiceVendor = "cartesia" | "elevenlabs" | "gemini" | "system" | "none";
 
 export interface Settings {
   provider: string;
@@ -35,7 +33,6 @@ export const DEFAULT_VOICES: Record<VoiceVendor, string> = {
   elevenlabs: "", // chosen in the co-host's Voice section (the account's voices)
   gemini: "Puck",
   system: "", // the computer's default voice
-  codex: "cove", // an OpenAI realtime voice
   none: "",
 };
 
@@ -52,11 +49,18 @@ function merge<T>(base: T, over: any): T {
   return out;
 }
 
+/** A voice from a vendor PiAir no longer has (the ChatGPT realtime voice, "codex", was dropped in
+ * 0.2.2) becomes the computer's own voice. */
+function known(s: Settings): Settings {
+  if (!(s.voice.vendor in DEFAULT_VOICES)) s.voice = { ...s.voice, vendor: "system", voice: "" };
+  return s;
+}
+
 export function load(dataDir: string) {
   dir = join(dataDir, "PiAir");
   mkdirSync(dir, { recursive: true });
   try {
-    current = merge(DEFAULTS, JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")));
+    current = known(merge(DEFAULTS, JSON.parse(readFileSync(join(dir, "settings.json"), "utf8"))));
   } catch {
     current = structuredClone(DEFAULTS);
   }
@@ -72,7 +76,7 @@ export function get(): Settings {
 }
 
 export function update(values: Partial<Settings> | Record<string, unknown>) {
-  current = merge(current, values);
+  current = known(merge(current, values));
   if (dir) {
     const tmp = join(dir, "settings.json.tmp");
     writeFileSync(tmp, JSON.stringify(current, null, 2));

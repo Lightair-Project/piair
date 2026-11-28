@@ -73,18 +73,42 @@ const manifest = {
   platforms: [...new Set(Object.keys(entry).map((t) => t.split("-")[0]))],
   contents: [{ kind: "helper", path: "bin", entry, modes: ["piair"] }],
   permissions: [
-    // its brain: any model provider, or an OpenAI-compatible address the streamer sets
-    "network:*",
+    // its brain: the model providers PiAir offers (their APIs and model lists) and their sign-ins;
+    // nothing else (src/catalog.ts, src/brain.ts and the pi-ai providers it registers)
+    "network:api.anthropic.com",
+    "network:claude.ai",
+    "network:platform.claude.com",
+    "network:api.openai.com",
+    "network:auth.openai.com",
+    "network:chatgpt.com",
+    "network:generativelanguage.googleapis.com",
+    "network:*.openrouter.ai",
+    "network:api.groq.com",
+    "network:api.cerebras.ai",
+    "network:api.x.ai",
+    "network:auth.x.ai",
+    "network:github.com",
+    "network:api.github.com",
+    "network:*.githubcopilot.com",
     // Sign in with ChatGPT comes back to this port
     "network.listen:1455",
     // its keys and sign-ins, in Lightair's Keychain
     "secrets",
     // the stream's chat, to answer it
     "chat.read",
+    // what's said on the tracks it hears, as text (Lightair does the listening)
+    "speech.read",
     // Lightair's own methods (scenes, sources), as MCP clients have
     "api.call",
     // what's on screen while AI drives is on, masked to the allowed apps
     "screen.capture",
+    // the mouse and keyboard, only while the streamer has AI drives on, through Lightair's gates
+    "computer.control",
+    // the streamer's own AI apps as its brain, started by Lightair outside the sandbox
+    "apps.run:codex",
+    "apps.run:claude",
+    "apps.run:agy",
+    "apps.run:grok",
   ],
 };
 await writeFile(join(pkg, "lightair-package.json"), JSON.stringify(manifest, null, 2) + "\n");

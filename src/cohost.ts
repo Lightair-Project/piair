@@ -6,19 +6,11 @@ import { log, on, run, send } from "./protocol.ts";
 import { forget, warm } from "./secrets.ts";
 import * as settings from "./settings.ts";
 import { LightairVoice } from "./voice.ts";
-import * as realtime from "./realtime-mode.ts";
 
-export const VERSION = "0.2.1";
+export const VERSION = "0.2.2";
 
 async function applyVoice() {
   const s = settings.get();
-  // realtime voice (the live model hears and speaks over a call) instead of a text-to-speech vendor
-  if (s.voice.vendor === "codex") {
-    director.setVoice(null);
-    await realtime.apply();
-    return;
-  }
-  if (realtime.running()) await realtime.stop();
   // Lightair speaks the text it's sent (its built-in voices; keys stay in Lightair)
   director.setVoice(s.voice.vendor === "none" ? null : new LightairVoice());
 }
@@ -70,16 +62,11 @@ on("secrets_changed", async () => {
 });
 
 on("chat", (m) => director.onChat(m.event ?? {}));
-on("heard", (m) => director.onHeard(String(m.text ?? ""), !!m.final, m.who ? String(m.who) : undefined));
-// realtime voice: raw heard audio (16 kHz mono s16le, base64) goes straight up the call
-on("audio", (m) => {
-  if (!realtime.running()) return;
-  const b = Buffer.from(String(m.pcm ?? ""), "base64");
-  realtime.pushAudio(new Int16Array(b.buffer, b.byteOffset, Math.floor(b.byteLength / 2)));
-});
+// `streamer`: Lightair says this line came from the streamer's own track (only those are trusted)
+on("heard", (m) => director.onHeard(String(m.text ?? ""), !!m.final, m.who ? String(m.who) : undefined, m.streamer === true));
 on("content", (m) => director.onContent(String(m.text ?? ""), String(m.source ?? "")));
-on("streamer", (m) => { director.onStreamer(!!m.speaking); if (m.speaking) realtime.interrupt(); });
-on("prompt", (m) => { const text = String(m.text ?? ""); if (realtime.running()) realtime.prompt(text); else director.onPrompt(text); });
+on("streamer", (m) => director.onStreamer(!!m.speaking));
+on("prompt", (m) => director.onPrompt(String(m.text ?? "")));
 on("voice_state", (m) => director.onVoiceState(String(m.utterance ?? ""), String(m.state ?? "")));
 on("stop", () => director.stop());
 on("computer", (m) => {

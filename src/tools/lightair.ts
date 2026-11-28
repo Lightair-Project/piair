@@ -29,7 +29,9 @@ export function lightairTools(): Tool[] {
       label: t.title,
       description: t.description,
       parameters: { type: "object", properties: t.properties, required: t.required, additionalProperties: true },
-      untrustedOk: t.readOnly,
+      // chat and guests may read state, but never see a picture of the program or a scene
+      untrustedOk: t.readOnly && t.method !== "screenshot",
+      readOnly: t.readOnly,
       async execute(_id: string, params: any) {
         const args = { ...(params ?? {}) };
         const method = methodOf(t, args);
