@@ -32,6 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned: the same Bun as the owner's Mac, where the signed macOS builds are made. A newer
+          # Bun (1.4.5) put a scheduled-job string (`schtasks /create`) into the Windows binary,
+          # which the catalog's persistence rule refuses.
+          bun-version: 1.3.6
       - run: bun install --frozen-lockfile
       - name: lightair-pack
         run: |
