@@ -32,8 +32,18 @@ export function on(t: string, h: Handler) {
 }
 
 /** A Lightair method (the remote API's or PiAir's own); rejects with `CallError`. */
+/** What caused the running turn (set by streamer.ts, which imports this module). */
+let causeHook: () => string = () => "streamer";
+export function setCauseHook(f: () => string) {
+  causeHook = f;
+}
+
 export function call<T = any>(method: string, params: Record<string, unknown> = {}, timeoutMs = 20_000): Promise<T> {
   const id = nextId++;
+  // what caused it goes with every computer and streamer call: Lightair applies chat's rules to chat's
+  if ((method.startsWith("computer.") || method.startsWith("streamer.")) && params.cause === undefined) {
+    params = { ...params, cause: causeHook() };
+  }
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);

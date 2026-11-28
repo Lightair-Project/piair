@@ -4,6 +4,7 @@ import * as brain from "./brain.ts";
 import * as memory from "./memory.ts";
 import { log, send } from "./protocol.ts";
 import * as settings from "./settings.ts";
+import * as streamer from "./streamer.ts";
 import { moderate, speakable, Splitter } from "./speech.ts";
 import { turnViewers } from "./tools/talk.ts";
 import type { Source } from "./tools/types.ts";
@@ -13,6 +14,8 @@ type Candidate = { score: number; at: number; line: string; text: string; who: s
 
 /** Least time between turns PiAir starts on its own, by chattiness. Infinity: only when addressed. */
 const GAP_MS = [Infinity, 45_000, 20_000, 8_000];
+/** In AI streamer mode, how long it's quiet before PiAir decides what to do next itself. */
+const SELF_GAP_MS = 40_000;
 
 let voice: Voice | null = null;
 let candidates: Candidate[] = [];
@@ -195,6 +198,11 @@ setInterval(() => {
   candidates = candidates.filter((c) => now - c.at < 90_000);
   // nothing from chat: maybe something to say about what's playing
   if (!candidates.length) {
+    // AI streamer mode: when it's quiet, it runs the stream itself
+    if (streamer.on() && now - lastTurnAt >= SELF_GAP_MS) {
+      void turn("self", `${streamer.idlePrompt()}${contentContext()}`);
+      return;
+    }
     const gap = GAP_MS[settings.get().behaviour.chattiness]!;
     if (contentWordsSinceTurn >= 25 && now - lastTurnAt >= gap && content.some((c) => now - c.at < 60_000)) {
       contentWordsSinceTurn = 0;

@@ -110,6 +110,15 @@ const manifest = {
     "apps.run:agy",
     "apps.run:grok",
   ],
+  // AI streamer mode asks for these when the streamer turns it on, never at install
+  optional_permissions: [
+    // running the stream on its own and acting on chat's requests, within the stream policy
+    "computer.autonomous",
+    // going live and stopping
+    "outputs.control",
+    // writing in chat as the streamer
+    "chat.write",
+  ],
 };
 await writeFile(join(pkg, "lightair-package.json"), JSON.stringify(manifest, null, 2) + "\n");
 await cp("LICENSE", join(pkg, "LICENSE"));

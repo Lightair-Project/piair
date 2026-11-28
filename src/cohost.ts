@@ -5,9 +5,10 @@ import * as memory from "./memory.ts";
 import { log, on, run, send } from "./protocol.ts";
 import { forget, warm } from "./secrets.ts";
 import * as settings from "./settings.ts";
+import * as streamer from "./streamer.ts";
 import { LightairVoice } from "./voice.ts";
 
-export const VERSION = "0.2.3";
+export const VERSION = "0.3.0";
 
 async function applyVoice() {
   const s = settings.get();
@@ -28,6 +29,14 @@ on("hello", async (m) => {
   // the streamer's AI apps on this computer
   void brain.refreshClis().then(async (changed) => changed && send({ t: "providers", providers: await brain.providerList() }));
   log("info", `PiAir ${VERSION} ready (${s.provider}/${s.model}, voice ${s.voice.vendor})`);
+  // AI streamer mode as Lightair has it (asks for its permissions when it's on)
+  if (m.mode && typeof m.mode === "object") void streamer.setMode(String(m.mode.mode ?? "off"), m.mode.policy);
+});
+
+// AI streamer mode switched in Lightair (Settings › AI co-host)
+on("mode", async (m) => {
+  await streamer.setMode(String(m.mode ?? "off"), m.policy);
+  brain.resetCohost();
 });
 
 on("settings", async (m) => {
