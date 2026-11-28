@@ -8,7 +8,7 @@ import * as settings from "./settings.ts";
 import * as streamer from "./streamer.ts";
 import { LightairVoice } from "./voice.ts";
 
-export const VERSION = "0.3.0";
+export const VERSION = "0.3.1";
 
 async function applyVoice() {
   const s = settings.get();
