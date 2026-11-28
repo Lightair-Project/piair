@@ -8,7 +8,7 @@ import * as settings from "./settings.ts";
 import { LightairVoice } from "./voice.ts";
 import * as realtime from "./realtime-mode.ts";
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.2.1";
 
 async function applyVoice() {
   const s = settings.get();
