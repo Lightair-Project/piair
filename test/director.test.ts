@@ -7,6 +7,8 @@ type Turn = { source: string; prompt: string };
 const turns: Turn[] = [];
 /** What the model says in the next turns (each turn takes the next list of text deltas). */
 const replies: string[][] = [];
+/** Computer tasks the director started (the goal of each). */
+const tasks: string[] = [];
 
 mock.module("../src/brain.ts", () => ({
   async cohostTurn(source: string, prompt: string, io: { onText(d: string): void }) {
@@ -14,7 +16,8 @@ mock.module("../src/brain.ts", () => ({
     for (const d of replies.shift() ?? ["[skip]"]) io.onText(d);
   },
   stopTask() {},
-  async runTaskFor() {
+  async runTaskFor(goal: string) {
+    tasks.push(goal);
     return "Done.";
   },
   async noteFromChat() {
@@ -77,6 +80,7 @@ beforeEach(async () => {
   turns.length = 0;
   said.length = 0;
   replies.length = 0;
+  tasks.length = 0;
   out.clear();
 });
 
@@ -125,6 +129,31 @@ describe("taking turns with the streamer", () => {
     chat("", { kind: { type: "raid", viewers: 30 } });
     await run(6000);
     expect(turns.map((t) => t.source)).toEqual(["event"]);
+  });
+});
+
+describe("speech heard on a conversation track", () => {
+  test("a guest's line is a guest turn; only the streamer's own track is the streamer's", async () => {
+    director.onHeard("how's the stream going", true, "Guest mic", false);
+    await run(50);
+    director.onHeard("say hi to everyone", true, "My mic", true);
+    await run(50);
+    expect(turns.map((t) => t.source)).toEqual(["guest", "streamer"]);
+  });
+
+  test("a guest asking for something on the computer never starts a computer task", async () => {
+    replies.push(["Sure, I'll open it."]);
+    director.onHeard("open Safari for me", true, "Guest mic", false);
+    await run(2000);
+    expect(turns.map((t) => t.source)).toEqual(["guest"]);
+    expect(tasks).toEqual([]);
+  });
+
+  test("the streamer asking the same out loud does start it", async () => {
+    replies.push(["Sure, I'll open it."]);
+    director.onHeard("open Safari for me", true, "My mic", true);
+    await run(2000);
+    expect(tasks).toHaveLength(1);
   });
 });
 
