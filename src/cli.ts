@@ -123,11 +123,17 @@ function parseClaude(line: string, s: ParseState): string[] {
     return [];
   }
   if (ev.type === "assistant") {
-    if (s.streamed) return [];
     const text = ((ev.message?.content ?? []) as { type: string; text?: string }[])
       .filter((b) => b.type === "text" && b.text)
       .map((b) => b.text)
       .join("");
+    // An app's own error (a sign-in that expired, a limit reached) comes as a made-up assistant
+    // message: it's the turn's failure, never words for the co-host to say on stream.
+    if (ev.error || ev.message?.model === "<synthetic>") {
+      s.error = text || String(ev.error);
+      return [];
+    }
+    if (s.streamed) return [];
     if (!text) return [];
     s.sawText = true;
     return [text];
